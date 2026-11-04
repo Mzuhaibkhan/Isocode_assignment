@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure 48px tap targets across all interactive buttons */
+button, input, select {
+  font-family: inherit;
+}
+
