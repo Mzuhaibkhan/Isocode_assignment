@@ -1,0 +1,15 @@
+{
+  "name": "procurement-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:api": "pnpm --filter @procurement/api dev",
+    "dev:web": "pnpm --filter @procurement/web dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "prettier": "^3.5.0"
+  }
+}
