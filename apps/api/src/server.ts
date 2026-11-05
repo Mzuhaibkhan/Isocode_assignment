@@ -5,6 +5,8 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import { config } from "./config.js";
 import { authRoutes, requireAuth } from "./routes/auth.js";
+import { membersRoutes } from "./routes/members.js";
+import { pricesRoutes } from "./routes/prices.js";
 import { netWeightX10, amountPaise, formatRupees } from "@procurement/shared";
 
 export function buildServer(): FastifyInstance {
@@ -36,10 +38,12 @@ export function buildServer(): FastifyInstance {
     return { status: "ok", timestamp: new Date().toISOString() };
   });
 
-  // Register Auth routes
+  // Register routes
   app.register(authRoutes);
+  app.register(membersRoutes);
+  app.register(pricesRoutes);
 
-  // Role guarded test endpoints for Phase 1 verification
+  // Role guarded test endpoints for verification
   app.get(
     "/protected/office-only",
     { preHandler: requireAuth(["office_manager"]) },
@@ -93,4 +97,3 @@ export function buildServer(): FastifyInstance {
 
   return app;
 }
-
