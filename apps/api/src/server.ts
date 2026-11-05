@@ -7,6 +7,8 @@ import { config } from "./config.js";
 import { authRoutes, requireAuth } from "./routes/auth.js";
 import { membersRoutes } from "./routes/members.js";
 import { pricesRoutes } from "./routes/prices.js";
+import { purchasesRoutes } from "./routes/purchases.js";
+import { smsRoutes } from "./routes/sms.js";
 import { netWeightX10, amountPaise, formatRupees } from "@procurement/shared";
 
 export function buildServer(): FastifyInstance {
@@ -42,6 +44,8 @@ export function buildServer(): FastifyInstance {
   app.register(authRoutes);
   app.register(membersRoutes);
   app.register(pricesRoutes);
+  app.register(purchasesRoutes);
+  app.register(smsRoutes);
 
   // Role guarded test endpoints for verification
   app.get(
