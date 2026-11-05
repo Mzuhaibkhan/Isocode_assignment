@@ -4,7 +4,8 @@ import { hashSecret } from "../auth/hash.js";
 import { encryptBank } from "../crypto/aes.js";
 import { sha256Hex } from "@procurement/shared";
 
-export async function runSeed() {
+export async function runSeed(targetDb?: any) {
+  const d = targetDb || db;
   console.log("Seeding database...");
 
   // 1. Centres
@@ -21,7 +22,7 @@ export async function runSeed() {
     village: "Renapur",
   };
 
-  await db.insert(schema.centres).values([c07, c12]).onConflictDoNothing();
+  await d.insert(schema.centres).values([c07, c12]).onConflictDoNothing();
 
   // 2. Users
   const officePasswordHash = await hashSecret("Password123!");
@@ -54,7 +55,7 @@ export async function runSeed() {
     pinHash: op2PinHash,
   };
 
-  await db.insert(schema.users).values([officeManager, op1, op2]).onConflictDoNothing();
+  await d.insert(schema.users).values([officeManager, op1, op2]).onConflictDoNothing();
 
   // 3. Devices
   const device1 = {
@@ -70,10 +71,10 @@ export async function runSeed() {
     publicKeyJwk: JSON.stringify({ kty: "EC", crv: "P-256", x: "test-x2", y: "test-y2" }),
   };
 
-  await db.insert(schema.devices).values([device1, device2]).onConflictDoNothing();
+  await d.insert(schema.devices).values([device1, device2]).onConflictDoNothing();
 
   // 4. Moisture Rules
-  await db
+  await d
     .insert(schema.moistureRules)
     .values([
       { id: "mr-soybean", crop: "Soybean", baseMoistureX10: 120, deductionPermillePerPoint: 10 },
@@ -99,7 +100,7 @@ export async function runSeed() {
     setBy: officeManager.id,
   };
 
-  await db.insert(schema.priceBoard).values([price1, price2]).onConflictDoNothing();
+  await d.insert(schema.priceBoard).values([price1, price2]).onConflictDoNothing();
 
   // 6. 25 Members across 4 villages
   const villages = ["Ausa", "Renapur", "Shirur Anantpal", "Nilanga"];
@@ -147,7 +148,7 @@ export async function runSeed() {
     consentTextVersion: 1,
   }));
 
-  await db.insert(schema.members).values(memberRecords).onConflictDoNothing();
+  await d.insert(schema.members).values(memberRecords).onConflictDoNothing();
 
   // 7. Seed Sample Purchases
   const samplePurchases = [
@@ -240,7 +241,7 @@ export async function runSeed() {
     },
   ];
 
-  await db.insert(schema.purchases).values(samplePurchases).onConflictDoNothing();
+  await d.insert(schema.purchases).values(samplePurchases).onConflictDoNothing();
 
   console.log("Seeding complete: 2 centres, 3 users, 2 devices, 25 members, 2 prices, 3 sample slips.");
 }
