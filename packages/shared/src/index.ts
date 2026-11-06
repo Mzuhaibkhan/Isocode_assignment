@@ -5,5 +5,6 @@ export * from "./hashChain.js";
 export * from "./reasons.js";
 export * from "./schemas.js";
 export * from "./slip.js";
+export * from "./signer.js";
 
 

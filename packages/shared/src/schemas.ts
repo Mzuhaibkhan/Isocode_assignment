@@ -30,7 +30,7 @@ export const PurchaseInputSchema = z.object({
   ratePaise: z.number().int().min(0),
   amountPaise: z.number().int().min(0),
   priceVersion: z.number().int().min(1),
-  clientTime: z.string().datetime(),
+  clientTime: z.string().min(1),
   deviceId: z.string().min(1),
   deviceSeq: z.number().int().min(1),
   prevHash: z.string().length(64),
@@ -40,6 +40,21 @@ export const PurchaseInputSchema = z.object({
 });
 
 export type PurchaseInput = z.infer<typeof PurchaseInputSchema>;
+
+export const SyncBatchSchema = z.object({
+  deviceId: z.string().min(1),
+  entries: z.array(PurchaseInputSchema).min(1).max(100),
+});
+
+export type SyncBatchInput = z.infer<typeof SyncBatchSchema>;
+
+export const DeviceRegisterSchema = z.object({
+  deviceId: z.string().optional(),
+  centreId: z.string().min(1),
+  publicKeyJwk: z.string().min(1),
+});
+
+export type DeviceRegisterInput = z.infer<typeof DeviceRegisterSchema>;
 
 export const MemberCreateSchema = z.object({
   farmerCode: z.string().min(1),
