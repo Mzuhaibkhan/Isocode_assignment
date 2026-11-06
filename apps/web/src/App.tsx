@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Login } from "./routes/Login.js";
 import { MemberList } from "./routes/members/MemberList.js";
 import { PriceBoard } from "./routes/prices/PriceBoard.js";
+import { CollectFlow } from "./routes/collect/CollectFlow.js";
+import { SmsLogView } from "./routes/sms/SmsLogView.js";
 import { Slip } from "./ui/Slip.js";
 import { Button } from "./ui/Button.js";
 import { syncMembersAndPrices } from "./offline/syncMembersAndPrices.js";
@@ -13,12 +15,22 @@ interface ActiveUser {
 
 export function App() {
   const [user, setUser] = useState<ActiveUser | null>(null);
-  const [activeTab, setActiveTab] = useState<"members" | "prices" | "slips">("members");
+  const [activeTab, setActiveTab] = useState<"collect" | "members" | "prices" | "sms" | "slips">("collect");
   const [sampleIndex, setSampleIndex] = useState(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
     // Background sync of members and prices on mount
     syncMembersAndPrices();
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   const sampleSlips = [
@@ -52,7 +64,18 @@ export function App() {
   ];
 
   if (!user) {
-    return <Login onLoginSuccess={(loggedInUser) => setUser(loggedInUser)} />;
+    return (
+      <Login
+        onLoginSuccess={(loggedInUser) => {
+          setUser(loggedInUser);
+          if (loggedInUser.role === "operator") {
+            setActiveTab("collect");
+          } else {
+            setActiveTab("members");
+          }
+        }}
+      />
+    );
   }
 
   const activeSlip = sampleSlips[sampleIndex];
@@ -72,6 +95,18 @@ export function App() {
           </div>
 
           <div className="flex items-center gap-3 text-xs">
+            {/* Online / Offline status badge */}
+            <div className="flex items-center gap-1.5 bg-stone-800 px-2 py-1 rounded">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isOnline ? "bg-emerald-400" : "bg-red-400"
+                }`}
+              />
+              <span className="text-stone-300 font-bold">
+                {isOnline ? "ऑनलाइन" : "ऑफलाइन"}
+              </span>
+            </div>
+
             <span className="font-bold text-stone-300">
               {user.name} ({user.role === "office_manager" ? "व्यवस्थापक" : "ऑपरेटर"})
             </span>
@@ -85,20 +120,30 @@ export function App() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="max-w-4xl mx-auto px-4 flex gap-2 border-t border-stone-800 overflow-x-auto">
+        <div className="max-w-4xl mx-auto px-4 flex gap-1 border-t border-stone-800 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("collect")}
+            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === "collect"
+                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
+                : "border-transparent text-stone-400 hover:text-white"
+            }`}
+          >
+            🌾 नवीन खरेदी (Collection)
+          </button>
           <button
             onClick={() => setActiveTab("members")}
-            className={`min-h-touch px-4 py-2 text-sm font-extrabold border-b-2 transition-all ${
+            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
               activeTab === "members"
                 ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
                 : "border-transparent text-stone-400 hover:text-white"
             }`}
           >
-            👥 सभासद नोंदणी (Members)
+            👥 सभासद (Members)
           </button>
           <button
             onClick={() => setActiveTab("prices")}
-            className={`min-h-touch px-4 py-2 text-sm font-extrabold border-b-2 transition-all ${
+            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
               activeTab === "prices"
                 ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
                 : "border-transparent text-stone-400 hover:text-white"
@@ -107,22 +152,34 @@ export function App() {
             💰 दर फलक (Price Board)
           </button>
           <button
+            onClick={() => setActiveTab("sms")}
+            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === "sms"
+                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
+                : "border-transparent text-stone-400 hover:text-white"
+            }`}
+          >
+            💬 SMS नोंदी (SMS Logs)
+          </button>
+          <button
             onClick={() => setActiveTab("slips")}
-            className={`min-h-touch px-4 py-2 text-sm font-extrabold border-b-2 transition-all ${
+            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
               activeTab === "slips"
                 ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
                 : "border-transparent text-stone-400 hover:text-white"
             }`}
           >
-            📄 पावती नमुना (Sample Slips)
+            📄 नमुना पावती (Samples)
           </button>
         </div>
       </header>
 
       {/* Main View Port */}
       <main className="flex-1 max-w-4xl w-full mx-auto p-3 sm:p-5">
+        {activeTab === "collect" && <CollectFlow />}
         {activeTab === "members" && <MemberList />}
         {activeTab === "prices" && <PriceBoard />}
+        {activeTab === "sms" && <SmsLogView />}
         {activeTab === "slips" && (
           <div className="flex flex-col gap-4">
             <Slip
@@ -134,8 +191,6 @@ export function App() {
               ratePerQuintal={activeSlip.ratePerQuintal}
               amountPaise={activeSlip.amountPaise}
               smsStatus="sent"
-              onShare={() => alert(`पावती शेअर केली: ${activeSlip.slipNo}`)}
-              onPrint={() => window.print()}
             />
 
             <div className="bg-white border border-stone-300 p-3 rounded-xl max-w-sm mx-auto w-full flex flex-col gap-2">
