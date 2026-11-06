@@ -1,0 +1,45 @@
+{
+  "slip": {
+    "title": "खरेदी पावती",
+    "receipt": "पावती",
+    "netWeight": "निव्वळ वजन",
+    "kg": "किग्रॅ",
+    "moisture": "ओलावा",
+    "rate": "दर",
+    "perQuintal": "प्रति क्विंटल",
+    "amount": "रक्कम",
+    "totalPayable": "एकूण देय रक्कम",
+    "paymentTimeline": "48 तासांत पैसे जमा होतील",
+    "smsSent": "SMS पाठवला ✓",
+    "smsPending": "SMS प्रलंबित...",
+    "smsOffline": "नेटवर्क आल्यावर SMS पाठवला जाईल",
+    "share": "शेअर करा (Share)",
+    "print": "प्रिंट (Print)",
+    "copied": "पावती कॉपी केली!",
+    "newPurchase": "नवीन खरेदी (New Purchase)"
+  },
+  "collect": {
+    "step1Title": "सभासद निवडा",
+    "step1Sub": "नाव, आडनाव, गाव किंवा सभासद कोडने शोधा",
+    "step2Title": "पीक आणि वजन",
+    "step2Sub": "काटा वजन नोंदवा (किग्रॅ)",
+    "step3Title": "ओलावा तपासणी",
+    "step3Sub": "ओलावा मीटरचे वाचन नोंदवा (%)",
+    "step4Title": "तपशील पडताळणी",
+    "step4Sub": "सर्व नोंदी तपासून खरेदी साठवा",
+    "grossWeight": "एकूण वजन (Gross)",
+    "tareWeight": "काट्याचे/वाहनाचे वजन (Tare)",
+    "beforeDeduction": "निव्वळ वजन (कपातीपूर्वी)",
+    "moistureDeduction": "ओलावा कपात",
+    "netWeight": "निव्वळ देय वजन (Net)",
+    "ratePerQuintal": "दर (प्रति क्विंटल)",
+    "totalPayable": "एकूण देय रक्कम",
+    "savePurchase": "खरेदी साठवा (Save Purchase)",
+    "saving": "साठवत आहे...",
+    "back": "मागे (Back)",
+    "next": "पुढे (Next)",
+    "consentWithdrawnError": "या सभासदाने DPDP कायद्यांतर्गत संमती मागे घेतली आहे. खरेदी नोंदवता येणार नाही.",
+    "bankUnverifiedNotice": "बँक खाते अद्याप पडताळलेले नाही. पेमेंटपूर्वी पडताळणी आवश्यक राहील."
+  }
+}
+
