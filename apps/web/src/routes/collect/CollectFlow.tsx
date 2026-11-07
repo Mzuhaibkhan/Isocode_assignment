@@ -3,6 +3,12 @@ import { db, CachedMember, CachedPrice } from "../../offline/db.js";
 import { enqueuePurchase } from "../../offline/queue.js";
 import { syncPurchases } from "../../offline/syncClient.js";
 import {
+  resizeImage,
+  requestPhotoReading,
+  queuePhotoOffline,
+  DisplayReading,
+} from "../../offline/photoReader.js";
+import {
   netWeightX10,
   amountPaise,
   formatRupees,
@@ -25,9 +31,13 @@ export function CollectFlow() {
   const [moistureInput, setMoistureInput] = useState<string>("11.5");
   const [activeInput, setActiveInput] = useState<"gross" | "tare" | "moisture">("gross");
 
-  // Photos (simulated attachments for Phase 5)
+  // Photos & AI Photo Reading (§10.2)
   const [scalePhotoAttached, setScalePhotoAttached] = useState<boolean>(false);
-  const [meterPhotoAttached, setMeterPhotoAttached] = useState<boolean>(false);
+  const [meterPhotoData, setMeterPhotoData] = useState<string | null>(null);
+  const [aiReading, setAiReading] = useState<DisplayReading | null>(null);
+  const [isReadingPhoto, setIsReadingPhoto] = useState<boolean>(false);
+  const [photoNotice, setPhotoNotice] = useState<string | null>(null);
+  const [mismatchConfirmed, setMismatchConfirmed] = useState<boolean>(false);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -169,13 +179,74 @@ export function CollectFlow() {
     }
   };
 
+  // Photo capture and AI LCD reading (§10.2)
+  const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsReadingPhoto(true);
+      setPhotoNotice(null);
+      setMismatchConfirmed(false);
+
+      const base64 = await resizeImage(file, 1200);
+      setMeterPhotoData(base64);
+
+      if (navigator.onLine) {
+        try {
+          const reading = await requestPhotoReading(base64, "meter");
+          setAiReading(reading);
+          if (reading.value !== null && Number.isFinite(reading.value)) {
+            // Pre-fill if moisture was untouched or default
+            setMoistureInput(reading.value.toFixed(1));
+          }
+        } catch (serverErr: any) {
+          console.warn("Server vision read failed, fallback to manual numpad:", serverErr);
+          setPhotoNotice("सर्व्हरवरून वाचन अशक्य. मॅन्युअल कीपॅड वापरा. फोटो साठवला गेला आहे.");
+          setMismatchConfirmed(true);
+          await queuePhotoOffline({
+            id: `photo-${Date.now()}`,
+            kind: "meter",
+            imageData: base64,
+            typedValueX10: moistureTenths,
+            matched: false,
+            aiNote: "Fallback to offline manual input",
+          });
+        }
+      } else {
+        // Offline mode: allow manual numpad with photo queued
+        setPhotoNotice("ऑफलाइन मोड: फोटो साठवला आहे, नेटवर्क आल्यावर सर्व्हरवर पाठवला जाईल.");
+        setMismatchConfirmed(true);
+        await queuePhotoOffline({
+          id: `photo-${Date.now()}`,
+          kind: "meter",
+          imageData: base64,
+          typedValueX10: moistureTenths,
+          matched: false,
+          aiNote: "Captured offline",
+        });
+      }
+    } catch (err: any) {
+      console.warn("Failed to process photo:", err);
+      setPhotoNotice("फोटो प्रक्रिया करताना त्रुटी. मॅन्युअल इनपुट सुरू ठेवा.");
+      setMismatchConfirmed(true);
+    } finally {
+      setIsReadingPhoto(false);
+      e.target.value = "";
+    }
+  };
+
   const handleReset = () => {
     setSelectedMember(null);
     setGrossInput("1250.0");
     setTareInput("18.0");
     setMoistureInput("11.5");
     setScalePhotoAttached(false);
-    setMeterPhotoAttached(false);
+    setMeterPhotoData(null);
+    setAiReading(null);
+    setIsReadingPhoto(false);
+    setPhotoNotice(null);
+    setMismatchConfirmed(false);
     setSaveError(null);
     setCreatedSlip(null);
     setStep(1);
@@ -475,6 +546,14 @@ export function CollectFlow() {
     const moisturePermilleVal = moisturePermille(moistureTenths);
     const deductionPct = (moisturePermilleVal / 10).toFixed(1);
 
+    // Mismatch detection: if AI returned a reading and operator's typed tenths differs
+    const hasMismatch =
+      aiReading?.valueX10 !== null &&
+      aiReading?.valueX10 !== undefined &&
+      moistureTenths !== aiReading.valueX10;
+
+    const isBlockedByMismatch = hasMismatch && !mismatchConfirmed;
+
     return (
       <StepShell
         stepCurrent={3}
@@ -539,39 +618,131 @@ export function CollectFlow() {
             </div>
           </div>
 
-          {/* Moisture Meter Photo Placeholder (§13.2) */}
-          <div className="flex justify-between items-center bg-stone-100 p-2.5 rounded-xl border border-stone-200">
-            <span className="text-xs font-bold text-stone-700">
-              📷 ओलावा मीटर फोटो (Meter Photo):
-            </span>
-            <button
-              type="button"
-              onClick={() => setMeterPhotoAttached(!meterPhotoAttached)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-bold border ${
-                meterPhotoAttached
-                  ? "bg-emerald-600 text-white border-emerald-700"
-                  : "bg-white text-stone-800 border-stone-300"
-              }`}
-            >
-              {meterPhotoAttached ? "फोटो जोडला ✓" : "कॅमेरा उघडा"}
-            </button>
+          {/* Moisture Meter Photo Capture & AI Reading (§10.2) */}
+          <div className="bg-stone-100 p-3 rounded-xl border border-stone-300 flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-stone-800">
+                📷 ओलावा मीटर डिस्प्ले फोटो (LCD Photo):
+              </span>
+              <label
+                htmlFor="meter-photo-input"
+                className="cursor-pointer bg-white border border-stone-400 text-stone-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-stone-50"
+              >
+                {meterPhotoData ? "फोटो बदला" : "कॅमेरा उघडा"}
+              </label>
+              <input
+                id="meter-photo-input"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handlePhotoCapture}
+              />
+            </div>
+
+            {isReadingPhoto && (
+              <div className="text-xs text-amber-700 font-bold bg-amber-50 p-2 rounded-lg flex items-center gap-2">
+                <span className="animate-spin inline-block">⏳</span> AI द्वारे मीटरचे वाचन सुरू आहे...
+              </div>
+            )}
+
+            {meterPhotoData && !isReadingPhoto && (
+              <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-stone-200">
+                <img
+                  src={meterPhotoData}
+                  alt="Meter LCD"
+                  className="w-16 h-12 object-cover rounded border border-stone-300"
+                />
+                <div className="text-xs">
+                  {aiReading?.value !== null && aiReading?.value !== undefined ? (
+                    <div>
+                      <span className="font-bold text-emerald-800">
+                        AI वाचन: {aiReading.value}%
+                      </span>{" "}
+                      <span className="text-stone-500">
+                        ({aiReading.confidence === "high" ? "उच्च खात्री" : "मध्यम"})
+                      </span>
+                      {aiReading.note && (
+                        <span className="block text-stone-500 text-[11px]">{aiReading.note}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-stone-600 font-medium">फोटो जोडला आहे</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {photoNotice && (
+              <div className="text-xs bg-stone-200 text-stone-800 p-2 rounded-lg font-medium">
+                ℹ️ {photoNotice}
+              </div>
+            )}
           </div>
 
-          {/* Numpad */}
+          {/* Photo Mismatch Block (§10.2: Blocks saving until operator confirms) */}
+          {hasMismatch && !mismatchConfirmed && (
+            <div
+              data-testid="mismatch-block"
+              className="bg-amber-50 border-2 border-amber-600 p-3 rounded-xl flex flex-col gap-2"
+            >
+              <div className="flex items-center gap-2 text-amber-900 font-black text-xs sm:text-sm">
+                <span>⚠️</span>
+                <span>वाचन विसंगती (Reading Mismatch Detected)!</span>
+              </div>
+              <p className="text-xs text-stone-700 font-medium">
+                AI ने वाचलेले मूल्य <b>{(aiReading!.valueX10! / 10).toFixed(1)}%</b> आहे आणि आपण टाइप केलेले मूल्य <b>{(moistureTenths / 10).toFixed(1)}%</b> आहे. पुढे जाण्यासाठी खालीलपैकी एक पर्याय निवडा:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                <button
+                  type="button"
+                  data-testid="btn-use-ai-reading"
+                  onClick={() => {
+                    setMoistureInput((aiReading!.valueX10! / 10).toFixed(1));
+                    setMismatchConfirmed(true);
+                  }}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold py-2 px-3 rounded-lg text-center"
+                >
+                  ✓ AI वाचन वापरा ({(aiReading!.valueX10! / 10).toFixed(1)}%)
+                </button>
+                <button
+                  type="button"
+                  data-testid="btn-confirm-typed-reading"
+                  onClick={() => setMismatchConfirmed(true)}
+                  className="bg-stone-800 hover:bg-stone-900 text-white text-xs font-bold py-2 px-3 rounded-lg text-center"
+                >
+                  ✓ माझे वाचन निश्चित करा ({(moistureTenths / 10).toFixed(1)}%)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Numpad (Manual Fallback §10.2) */}
           <Numpad
-            onDigit={handleDigit}
-            onClear={handleClear}
-            onBackspace={handleBackspace}
+            onDigit={(d) => {
+              handleDigit(d);
+              setMismatchConfirmed(false);
+            }}
+            onClear={() => {
+              handleClear();
+              setMismatchConfirmed(false);
+            }}
+            onBackspace={() => {
+              handleBackspace();
+              setMismatchConfirmed(false);
+            }}
           />
 
-          {/* Next Button */}
+          {/* Next Button - Blocked when mismatch is unresolved (§10.2) */}
           <Button
             variant="primary"
-            disabled={moistureTenths < 0}
+            disabled={isBlockedByMismatch || moistureTenths <= 0}
             onClick={() => setStep(4)}
             className="w-full text-base py-3.5"
           >
-            पुढे जा (Next: Summary) →
+            {isBlockedByMismatch
+              ? "⚠️ विसंगती निश्चित करा (Confirm Mismatch to Proceed)"
+              : "पुढे जा (Next: Summary) →"}
           </Button>
         </div>
       </StepShell>

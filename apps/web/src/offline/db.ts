@@ -37,6 +37,19 @@ export interface CachedPrice {
   effectiveFrom: string;
 }
 
+export interface QueuedPhoto {
+  id: string;
+  purchaseId?: string;
+  kind: "scale" | "meter";
+  imageData: string;
+  aiValueX10?: number | null;
+  typedValueX10: number;
+  matched: boolean;
+  aiNote?: string;
+  createdAt: string;
+  status: "pending" | "uploaded";
+}
+
 export function buildNameTokens(name: string, nameLatin?: string): string[] {
   const tokens = new Set<string>();
 
@@ -63,6 +76,7 @@ export class AppDB extends Dexie {
   members!: Table<CachedMember, string>;
   prices!: Table<CachedPrice, string>;
   meta!: Table<{ key: string; value: unknown }, string>;
+  photos!: Table<QueuedPhoto, string>;
 
   constructor() {
     super("procurement_db");
@@ -71,6 +85,13 @@ export class AppDB extends Dexie {
       members: "id, farmerCode, village, *nameTokens", // * = multiEntry index on tokens
       prices: "id, crop, grade, version",
       meta: "key",
+    });
+    this.version(2).stores({
+      outbox: "id, seq, status",
+      members: "id, farmerCode, village, *nameTokens",
+      prices: "id, crop, grade, version",
+      meta: "key",
+      photos: "id, purchaseId, status",
     });
   }
 
