@@ -64,7 +64,6 @@ export const Slip: FC<SlipProps> = ({
       }
     }
 
-    // Clipboard fallback
     try {
       await navigator.clipboard.writeText(canonicalSlipText);
       setCopied(true);
@@ -83,90 +82,91 @@ export const Slip: FC<SlipProps> = ({
   };
 
   return (
-    <div className="bg-white border-2 border-stone-900 rounded-2xl p-5 sm:p-6 shadow-lg max-w-sm mx-auto text-text-main flex flex-col gap-4">
+    <div className="bg-white border-2 border-chaos-400 rounded-2xl p-5 sm:p-6 shadow-tactile-lg max-w-sm mx-auto text-chaos-400 flex flex-col gap-4 animate-fade-in">
       {/* Header with Slip No and SMS badge (§11) */}
-      <div className="border-b-2 border-stone-300 pb-3 flex justify-between items-start">
+      <div className="border-b-2 border-chaos-200 pb-3 flex justify-between items-start">
         <div>
-          <span className="text-xs uppercase font-black tracking-wider text-text-muted">
-            खरेदी पावती
+          <span className="text-[11px] font-mono uppercase font-black tracking-widest text-chaos-300 block">
+            खरेदी पावती (RECEIPT)
           </span>
-          <p className="text-2xl font-black text-stone-950 tracking-tight">{slipNo}</p>
+          <p className="font-mono text-2xl font-black text-chaos-400 tracking-tight">{slipNo}</p>
         </div>
         <div className="text-right">
           <span
-            className={`text-xs px-2.5 py-1 rounded-full font-bold inline-block ${
+            className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-md font-black inline-block border ${
               smsStatus === "sent"
-                ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                ? "bg-emerald-100 text-emerald-950 border-emerald-400"
                 : smsStatus === "offline"
-                ? "bg-blue-100 text-blue-900 border border-blue-300"
-                : "bg-amber-100 text-amber-900 border border-amber-300"
+                ? "bg-amber-100 text-amber-950 border-amber-400"
+                : "bg-stone-100 text-stone-700 border-stone-300"
             }`}
           >
             {smsStatus === "sent"
               ? "SMS पाठवला ✓"
               : smsStatus === "offline"
-              ? "नेटवर्क आल्यावर SMS जाईल"
-              : "SMS प्रलंबित..."}
+              ? "SMS रांगेत ⏳"
+              : "प्रलंबित"}
           </span>
         </div>
       </div>
 
-      {/* Farmer & Crop Header */}
-      <div>
-        <p className="text-2xl font-black text-stone-950 leading-tight">{farmerName}</p>
-        <p className="text-base font-extrabold text-brand mt-0.5">{crop}</p>
+      {/* Farmer and Crop info */}
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs font-bold text-chaos-300 uppercase tracking-wide">सभासद शेतकरी:</span>
+        <h3 className="text-2xl font-black text-chaos-400 leading-tight">{farmerName}</h3>
+        <p className="text-sm font-bold text-chaos-300 mt-0.5">{crop}</p>
       </div>
 
-      {/* 2. Middle Specs: Net weight, moisture, rate */}
-      <div className="bg-stone-50 p-3.5 rounded-xl border border-stone-300 grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <span className="text-text-muted text-xs font-bold block">निव्वळ वजन</span>
-          <span className="text-xl font-black text-stone-900">{netKg} किग्रॅ</span>
-        </div>
-        <div>
-          <span className="text-text-muted text-xs font-bold block">ओलावा</span>
-          <span className="text-xl font-black text-stone-900">{moisturePercent}%</span>
-        </div>
-        <div className="col-span-2 border-t border-stone-200 pt-2 flex justify-between items-center">
-          <span className="text-text-muted text-xs font-bold">दर प्रति क्विंटल</span>
-          <span className="text-base font-black text-stone-800">
-            {formattedRate} / क्विंटल
-          </span>
-        </div>
-      </div>
-
-      {/* 1. Amount Hero - Largest Visual Element (>= 40px font §11, §13.1) */}
-      <div className="bg-emerald-50 border-2 border-emerald-600/40 p-4 rounded-xl text-center shadow-inner">
-        <span className="text-xs font-black text-emerald-800 uppercase tracking-wider block">
-          रक्कम (एकूण देय)
+      {/* Center Amount Highlight - Monumental Display (§13.1) */}
+      <div className="bg-chaos-100 p-4 rounded-xl border-2 border-chaos-400 text-center shadow-inner">
+        <span className="text-[11px] font-mono font-black uppercase tracking-widest text-chaos-300 block mb-1">
+          एकूण देय रक्कम (NET PAYABLE)
         </span>
-        <span className="text-4xl sm:text-5xl font-black text-stone-950 tracking-tight block my-1">
+        <span className="font-display text-4xl sm:text-5xl font-black text-chaos-400 block tracking-tight">
           {formattedAmount}
         </span>
-        <span className="text-xs font-extrabold text-emerald-900 block mt-1">
-          ४८ तासांत पैसे जमा होतील
-        </span>
       </div>
 
-      {/* Action Buttons: Share & Print & New */}
-      <div className="flex flex-col gap-2 pt-1">
+      {/* Grid Details */}
+      <div className="grid grid-cols-2 gap-2 text-xs font-bold bg-stone-50 p-3 rounded-xl border border-chaos-200">
+        <div>
+          <span className="text-chaos-300 text-[10px] font-mono uppercase block">निव्वळ वजन:</span>
+          <span className="font-mono text-base font-black text-chaos-400">{netKg} किग्रॅ</span>
+        </div>
+        <div>
+          <span className="text-chaos-300 text-[10px] font-mono uppercase block">हमीभाव दर:</span>
+          <span className="font-mono text-base font-black text-chaos-400">{formattedRate}/qtl</span>
+        </div>
+        <div className="mt-1">
+          <span className="text-chaos-300 text-[10px] font-mono uppercase block">ओलावा प्रमाण:</span>
+          <span className="font-mono text-base font-black text-chaos-400">{moisturePercent}%</span>
+        </div>
+        <div className="mt-1">
+          <span className="text-chaos-300 text-[10px] font-mono uppercase block">कपात:</span>
+          <span className="font-mono text-base font-black text-chaos-400">
+            {parseFloat(moisturePercent) > 12.0
+              ? `${((parseFloat(moisturePercent) - 12.0) * 1).toFixed(1)}%`
+              : "0%"}
+          </span>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex flex-col gap-2 pt-2 border-t-2 border-chaos-200">
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={handleShareClick}
-            className="min-h-touch bg-stone-950 text-white font-black rounded-xl active:bg-stone-800 hover:bg-stone-850 text-sm py-3 px-3 shadow transition-colors flex items-center justify-center gap-1.5"
+            className="btn-tactile min-h-[46px] bg-white border-2 border-chaos-400 text-chaos-400 font-mono text-xs font-black uppercase tracking-wider rounded-lg hover:bg-chaos-100 flex items-center justify-center gap-1 shadow-tactile active:translate-y-[1px]"
           >
-            <span>📱</span>
-            <span>{copied ? "कॉपी झाली! ✓" : "शेअर करा (Share)"}</span>
+            {copied ? "कॉपी झाले ✓" : "शेअर / कॉपी"}
           </button>
-
           <button
             type="button"
             onClick={handlePrintClick}
-            className="min-h-touch border-2 border-stone-900 bg-white font-black rounded-xl active:bg-stone-100 text-stone-950 text-sm py-3 px-3 shadow-sm transition-colors flex items-center justify-center gap-1.5"
+            className="btn-tactile min-h-[46px] bg-white border-2 border-chaos-400 text-chaos-400 font-mono text-xs font-black uppercase tracking-wider rounded-lg hover:bg-chaos-100 flex items-center justify-center gap-1 shadow-tactile active:translate-y-[1px]"
           >
-            <span>🖨️</span>
-            <span>प्रिंट (Print)</span>
+            प्रिंट करा 🖨️
           </button>
         </div>
 
@@ -174,18 +174,12 @@ export const Slip: FC<SlipProps> = ({
           <button
             type="button"
             onClick={onNewPurchase}
-            className="min-h-touch w-full bg-brand text-white font-black rounded-xl active:bg-emerald-800 text-sm py-3 px-4 shadow transition-colors"
+            className="btn-tactile min-h-[48px] w-full bg-chaos-500 hover:bg-orange-600 text-chaos-400 border-2 border-chaos-400 font-display text-lg font-black uppercase tracking-wide rounded-lg flex items-center justify-center gap-1 shadow-tactile active:translate-y-[2px]"
           >
-            🌾 नवीन खरेदी नोंदवा (Next Farmer)
+            + नवीन खरेदी नोंदवा (New Entry)
           </button>
         )}
       </div>
-
-      {copied && (
-        <div className="text-center text-xs font-black text-emerald-700 bg-emerald-50 py-1 rounded">
-          पावती क्लिपबोर्डवर कॉपी केली आहे! (Copied to clipboard)
-        </div>
-      )}
     </div>
   );
 };

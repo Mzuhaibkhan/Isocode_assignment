@@ -21,47 +21,47 @@ export const Numpad: React.FC<NumpadProps> = ({
   ];
 
   return (
-    <div className="w-full max-w-sm mx-auto grid grid-cols-3 gap-2.5 p-2 bg-stone-100 rounded-2xl border-2 border-stone-300">
-      {keys.flat().map((k, index) => {
-        if (!k) {
-          return <div key={index} className="min-h-[56px]" />;
-        }
+    <div className="w-full max-w-sm mx-auto flex flex-col gap-2 p-3 bg-chaos-100 rounded-xl border-2 border-chaos-400 shadow-tactile">
+      <div className="grid grid-cols-3 gap-2">
+        {keys.flat().map((k, index) => {
+          if (!k) {
+            return <div key={index} className="min-h-[58px]" />;
+          }
 
-        if (k === "backspace") {
+          if (k === "backspace") {
+            return (
+              <button
+                key="backspace"
+                type="button"
+                onClick={onBackspace}
+                className="min-h-[58px] min-w-touch flex items-center justify-center text-xl font-mono font-black bg-white text-chaos-400 border-2 border-chaos-400 rounded-lg active:translate-y-[2px] transition-all shadow-tactile select-none hover:bg-stone-50"
+                aria-label="Backspace"
+              >
+                ⌫
+              </button>
+            );
+          }
+
           return (
             <button
-              key="backspace"
+              key={k}
               type="button"
-              onClick={onBackspace}
-              className="min-h-[56px] min-w-touch flex items-center justify-center text-2xl font-bold bg-white text-stone-900 border-2 border-stone-400 rounded-xl active:bg-stone-200 select-none shadow-sm"
-              aria-label="Backspace"
+              onClick={() => onDigit(k)}
+              className="min-h-[58px] min-w-touch flex items-center justify-center font-display text-3xl sm:text-4xl font-black bg-white text-chaos-400 border-2 border-chaos-400 rounded-lg active:translate-y-[2px] active:bg-chaos-500 transition-all shadow-tactile select-none hover:bg-stone-50"
             >
-              ⌫
+              {k}
             </button>
           );
-        }
-
-        return (
-          <button
-            key={k}
-            type="button"
-            onClick={() => onDigit(k)}
-            className="min-h-[56px] min-w-touch flex items-center justify-center text-3xl font-extrabold bg-white text-text-main border-2 border-stone-800 rounded-xl active:bg-brand active:text-white select-none shadow-sm"
-          >
-            {k}
-          </button>
-        );
-      })}
-      <div className="col-span-3 pt-1">
-        <button
-          type="button"
-          onClick={onClear}
-          className="w-full min-h-touch py-2 text-base font-bold text-danger border-2 border-danger/40 bg-white rounded-xl active:bg-red-50"
-        >
-          साफ करा (Clear)
-        </button>
+        })}
       </div>
+
+      <button
+        type="button"
+        onClick={onClear}
+        className="w-full min-h-[44px] py-2 font-mono text-xs font-black uppercase tracking-wider text-red-900 border-2 border-red-900/60 bg-red-50 hover:bg-red-100 rounded-lg active:translate-y-[1px] transition-all"
+      >
+        सर्व खोडा (Clear All)
+      </button>
     </div>
   );
 };
-
