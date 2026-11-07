@@ -54,7 +54,7 @@ export async function reviewRoutes(app: FastifyInstance) {
         .orderBy(desc(schema.purchases.serverReceivedAt));
 
       // Fetch attached photos for each held purchase
-      const purchaseIds = heldPurchases.map((p) => p.id);
+      const purchaseIds = heldPurchases.map((p: any) => p.id);
       let photos: any[] = [];
       if (purchaseIds.length > 0) {
         photos = await db
@@ -63,7 +63,7 @@ export async function reviewRoutes(app: FastifyInstance) {
           .where(inArray(schema.purchasePhotos.purchaseId, purchaseIds));
       }
 
-      const formatted = heldPurchases.map((p) => ({
+      const formatted = heldPurchases.map((p: any) => ({
         ...p,
         amountFormatted: formatRupees(p.amountPaise),
         netKg: (p.netX10 / 10).toFixed(1),

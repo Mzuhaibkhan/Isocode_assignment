@@ -75,7 +75,7 @@ export async function evaluatePurchaseFlags(
       .orderBy(desc(schema.purchases.clientTime))
       .limit(10);
 
-    const priorTimes = priorPurchases.map((p) => new Date(p.clientTime));
+    const priorTimes = priorPurchases.map((p: any) => new Date(p.clientTime));
     if (isDuplicateFarmerTime(input.clientTime, priorTimes, 60)) {
       flags.push(SyncHoldReason.DUPLICATE_FARMER);
     }
@@ -128,7 +128,7 @@ export async function evaluatePurchaseFlags(
       .where(eq(schema.devices.centreId, input.centreId));
 
     if (centreDevices.length > 0) {
-      const deviceIds = centreDevices.map((d) => d.id);
+      const deviceIds = centreDevices.map((d: any) => d.id);
       const recentPurchases = await db
         .select({ moistureX10: schema.purchases.moistureX10 })
         .from(schema.purchases)
@@ -138,7 +138,7 @@ export async function evaluatePurchaseFlags(
 
       const moistures = [
         input.moistureX10,
-        ...recentPurchases.map((p) => p.moistureX10),
+        ...recentPurchases.map((p: any) => p.moistureX10),
       ];
 
       if (isUniformMoisture(moistures, 20, 3)) {

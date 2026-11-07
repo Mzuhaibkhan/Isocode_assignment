@@ -87,7 +87,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
 
       // Filter and format based on decrypted snapshot
       const formatted = eligible
-        .map((p) => {
+        .map((p: any) => {
           let snapshot: any = null;
           try {
             snapshot = JSON.parse(decryptBank(p.memberSnapshotJson));
@@ -101,7 +101,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
             isBankVerified,
           };
         })
-        .filter((p) => p.isBankVerified);
+        .filter((p: any) => p.isBankVerified);
 
       return reply.send({ eligiblePurchases: formatted });
     }
@@ -245,7 +245,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
       let serial = 1;
 
       for (const group of groupedByMember.values()) {
-        const narrationSlips = group.purchases.map((p) => p.slipNo).join(", ");
+        const narrationSlips = group.purchases.map((p: any) => p.slipNo).join(", ");
         const lineAmountFormatted = (group.totalAmountPaise / 100).toFixed(2);
         const paymentReference = `PAY-${runId.slice(0, 6)}-${String(serial).padStart(3, "0")}`;
 
@@ -265,7 +265,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
 
       // Strict Code Assertion (§12): File total must strictly equal the sum of purchases to the paisa
       const includedPurchases = Array.from(groupedByMember.values()).flatMap((g) => g.purchases);
-      const expectedSumPaise = includedPurchases.reduce((acc, p) => acc + p.amountPaise, 0);
+      const expectedSumPaise = includedPurchases.reduce((acc: number, p: any) => acc + p.amountPaise, 0);
 
       if (calculatedTotalPaise !== expectedSumPaise) {
         throw new Error(
@@ -297,7 +297,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
           id: `item-${crypto.randomUUID().slice(0, 8)}`,
           runId,
           memberId: group.memberId,
-          purchaseIds: group.purchases.map((p) => p.id),
+          purchaseIds: group.purchases.map((p: any) => p.id),
           amountPaise: line.amountPaise,
           status: "queued",
           bankRef: line.paymentReference,
@@ -305,7 +305,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
       }
 
       // Mark included purchases as 'paid'
-      const includedIds = includedPurchases.map((p) => p.id);
+      const includedIds = includedPurchases.map((p: any) => p.id);
       await db
         .update(schema.purchases)
         .set({ status: "paid" })
@@ -562,7 +562,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
       }
 
       // Code Assertion (§12): Total of retry run must equal sum of failed items
-      const expectedFailedTotal = failedItems.reduce((acc, itm) => acc + itm.amountPaise, 0);
+      const expectedFailedTotal = failedItems.reduce((acc: number, itm: any) => acc + itm.amountPaise, 0);
       if (retryTotalPaise !== expectedFailedTotal) {
         throw new Error(
           `Reconciliation failure on retry: ${retryTotalPaise} != ${expectedFailedTotal}`

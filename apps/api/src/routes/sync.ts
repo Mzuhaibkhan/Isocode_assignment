@@ -360,7 +360,7 @@ export async function syncRoutes(app: FastifyInstance) {
         serverTime: serverNow,
         priceVersion: entry.priceVersion,
         ratePaise: entry.ratePaise,
-        activePriceVersion: activePrice?.version,
+        activePriceVersion: newerPrices[0]?.version ?? entry.priceVersion,
         consentWithdrawnAt: member.consentWithdrawnAt,
         excludePurchaseId: entry.id,
       });
