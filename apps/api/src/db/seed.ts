@@ -150,7 +150,8 @@ export async function runSeed(targetDb?: any) {
 
   await d.insert(schema.members).values(memberRecords).onConflictDoNothing();
 
-  // 7. Seed Sample Purchases
+  // 7. Seed Sample Purchases (yesterday)
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const samplePurchases = [
     {
       id: "a0000000-0000-0000-0000-000000000001",
@@ -178,7 +179,7 @@ export async function runSeed(targetDb?: any) {
       prevHash: "0".repeat(64),
       entryHash: await sha256Hex("C07-24518"),
       signature: "mock-sig-1",
-      clientTime: new Date(),
+      clientTime: yesterday,
       status: "accepted",
     },
     {
@@ -207,7 +208,7 @@ export async function runSeed(targetDb?: any) {
       prevHash: await sha256Hex("C07-24518"),
       entryHash: await sha256Hex("C07-24519"),
       signature: "mock-sig-2",
-      clientTime: new Date(),
+      clientTime: yesterday,
       status: "accepted",
     },
     {
@@ -236,7 +237,7 @@ export async function runSeed(targetDb?: any) {
       prevHash: "0".repeat(64),
       entryHash: await sha256Hex("C12-08876"),
       signature: "mock-sig-3",
-      clientTime: new Date(),
+      clientTime: yesterday,
       status: "accepted",
     },
   ];

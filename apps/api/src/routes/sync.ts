@@ -18,6 +18,7 @@ import {
 import { encryptBank, decryptBank, maskBankAccount } from "../crypto/aes.js";
 import { sendSlipSms } from "../adapters/sms.mock.js";
 import { recordAudit } from "../db/audit.js";
+import { evaluatePurchaseFlags } from "../flags/index.js";
 import crypto from "node:crypto";
 
 export interface SyncEntryResult {
@@ -347,16 +348,27 @@ export async function syncRoutes(app: FastifyInstance) {
         flagCodes.push(SyncHoldReason.STALE_PRICE_VERSION);
       }
 
-      // Clock Skew Check (> 6 hours difference between phone client_time and server)
+      // Step 10: Run full suite of flag rules (§10.1)
       const serverNow = new Date();
-      const timeSkewMs = Math.abs(serverNow.getTime() - entryClientDate.getTime());
-      if (timeSkewMs > 6 * 3600 * 1000) {
-        flagCodes.push(SyncHoldReason.CLOCK_SKEW);
-      }
+      const evaluatedFlags = await evaluatePurchaseFlags({
+        memberId: entry.memberId,
+        centreId: device.centreId,
+        crop: entry.crop,
+        netX10: entry.netX10,
+        moistureX10: entry.moistureX10,
+        clientTime: entryClientDate,
+        serverTime: serverNow,
+        priceVersion: entry.priceVersion,
+        ratePaise: entry.ratePaise,
+        activePriceVersion: activePrice?.version,
+        consentWithdrawnAt: member.consentWithdrawnAt,
+        excludePurchaseId: entry.id,
+      });
 
-      // Consent Withdrawn Check (withdrawn before or at client_time)
-      if (member.consentWithdrawnAt && new Date(member.consentWithdrawnAt) <= entryClientDate) {
-        flagCodes.push(SyncHoldReason.CONSENT_WITHDRAWN);
+      for (const f of evaluatedFlags) {
+        if (!flagCodes.includes(f)) {
+          flagCodes.push(f);
+        }
       }
 
       const entryStatus = flagCodes.length > 0 ? "held" : "accepted";
