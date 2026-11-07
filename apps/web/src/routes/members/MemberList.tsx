@@ -86,135 +86,161 @@ export const MemberList: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-2xl mx-auto p-2">
-      {/* Top Action Header */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center bg-white p-4 rounded-2xl border-2 border-stone-800 shadow-sm">
+    <div className="flex flex-col gap-5 max-w-4xl mx-auto p-1 font-sans">
+      {/* Top Brutalist Action Masthead */}
+      <div className="bg-chaos-paper border-2 border-chaos-black p-5 shadow-tactile flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
-          <h2 className="text-xl font-black text-text-main">
-            शेतकरी सभासद यादी (Member Registry)
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-xs uppercase font-bold text-chaos-orange tracking-widest">
+              MEMBERSHIP DIRECTORY // सभासद यादी
+            </span>
+            <span className="font-mono text-[10px] bg-chaos-black text-white px-2 py-0.5 uppercase tracking-wider">
+              DPDP SECURE
+            </span>
+          </div>
+          <h2 className="font-display font-black text-2xl sm:text-3xl uppercase tracking-tight text-chaos-black">
+            शेतकरी सभासद यादी (MEMBER REGISTRY)
           </h2>
-          <p className="text-xs font-bold text-text-muted">
-            एकूण सभासद: {members.length} | DPDP कायदा २०२३ सुरक्षित
+          <p className="font-mono text-xs uppercase tracking-wider text-chaos-muted mt-0.5">
+            DEXIE LOCAL CACHE: {members.length} DISPLAYED • LATUR DISTRICT HUB
           </p>
         </div>
-        <Button onClick={() => setShowAddForm(true)} size="default">
-          + नवीन शेतकरी जोडा
+        <Button
+          onClick={() => setShowAddForm(true)}
+          variant="orange"
+          size="default"
+          className="shadow-tactile-sm whitespace-nowrap"
+        >
+          + नवीन शेतकरी जोडा // ENROLL
         </Button>
       </div>
 
       {statusMsg && (
-        <div className="bg-emerald-50 border-2 border-brand text-brand font-bold text-sm p-3 rounded-xl">
+        <div className="bg-emerald-50 border-2 border-emerald-600 text-emerald-900 font-mono text-xs font-bold p-3 shadow-tactile-sm uppercase tracking-wide">
           {statusMsg}
         </div>
       )}
 
-      {/* High-speed Realtime Search Bar */}
-      <div className="bg-white p-3 rounded-2xl border-2 border-stone-700 shadow-sm">
-        <label htmlFor="member-search" className="text-xs font-bold text-text-muted block mb-1">
-          नाव, आडनाव (मराठी/English), शेतकरी कोड किंवा गावाने शोधा:
+      {/* Realtime Search Bar */}
+      <div className="bg-chaos-paper border-2 border-chaos-black p-4 shadow-tactile-sm">
+        <label htmlFor="member-search" className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-muted block mb-2">
+          नाव, आडनाव (मराठी/ENGLISH), शेतकरी कोड किंवा गावाने शोधा:
         </label>
-        <input
-          id="member-search"
-          type="text"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          placeholder="उदा. जाधव, Sunil, FMR-001, Ausa..."
-          className="w-full min-h-touch px-4 py-2.5 rounded-xl border-2 border-stone-800 text-lg font-bold text-text-main focus:outline-none focus:ring-2 focus:ring-brand"
-        />
+        <div className="relative">
+          <input
+            id="member-search"
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="उदा. जाधव, Sunil, FMR-001, Ausa..."
+            className="w-full min-h-[48px] px-4 py-2.5 rounded-none border-2 border-chaos-black text-base font-sans font-bold text-chaos-black bg-chaos-canvas focus:bg-white focus:outline-none focus:shadow-tactile-orange transition-all placeholder:text-chaos-muted"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                loadMembers("");
+              }}
+              className="absolute right-3 top-2.5 font-mono text-xs font-bold text-chaos-muted hover:text-chaos-black px-2 py-1"
+            >
+              ✕ CLEAR
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Member Cards List */}
       <div className="flex flex-col gap-3">
         {loading ? (
-          <div className="text-center py-8 font-bold text-text-muted">
-            सभासद शोधत आहे...
+          <div className="text-center py-12 font-mono text-xs uppercase tracking-wider text-chaos-muted bg-chaos-paper border-2 border-dashed border-chaos-black/40">
+            [ सभासद शोधत आहे // QUERYING INDEXEDDB... ]
           </div>
         ) : members.length === 0 ? (
-          <div className="text-center py-8 bg-white rounded-2xl border border-stone-300 font-bold text-text-muted">
-            कोणताही शेतकरी सापडला नाही.
+          <div className="text-center py-12 bg-chaos-paper border-2 border-dashed border-chaos-black/40 font-mono text-xs uppercase tracking-wider text-chaos-muted">
+            [ कोणताही शेतकरी सापडला नाही // NO RECORDS FOUND ]
           </div>
         ) : (
           members.map((m) => (
             <div
               key={m.id}
-              className={`p-4 rounded-xl border-2 transition-all bg-white ${
+              className={`p-4 border-2 transition-all bg-chaos-paper shadow-tactile-sm hover:shadow-tactile ${
                 m.consentWithdrawn
-                  ? "border-danger/60 bg-red-50/30"
+                  ? "border-red-600 bg-red-50/40"
                   : m.bankVerified
-                  ? "border-stone-800"
-                  : "border-amber-500"
+                  ? "border-chaos-black"
+                  : "border-chaos-orange"
               }`}
             >
-              <div className="flex justify-between items-start gap-2">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black bg-stone-100 border border-stone-300 px-2 py-0.5 rounded text-stone-800">
+                    <span className="font-mono text-xs font-black bg-chaos-black text-chaos-orange px-2 py-0.5">
                       {m.farmerCode}
                     </span>
-                    <span className="text-xs font-bold text-text-muted">
-                      गाव: {m.village} | जमीन: {(m.landTenthsAcre / 10).toFixed(1)} एकर
+                    <span className="font-mono text-xs text-chaos-muted uppercase">
+                      गाव: {m.village} • जमीन: {(m.landTenthsAcre / 10).toFixed(1)} एकर
                     </span>
                   </div>
-                  <h3 className="text-xl font-black text-stone-950 mt-1">
+                  <h3 className="font-sans font-black text-xl text-chaos-black mt-1">
                     {m.name}
                   </h3>
                   {m.nameLatin && (
-                    <span className="text-xs font-semibold text-stone-600 block">
+                    <span className="font-mono text-xs text-chaos-muted uppercase tracking-wider block">
                       {m.nameLatin}
                     </span>
                   )}
                 </div>
 
                 {/* Status Badges */}
-                <div className="flex flex-col items-end gap-1.5">
+                <div className="flex flex-wrap sm:flex-col items-start sm:items-end gap-1.5">
                   {m.consentWithdrawn ? (
-                    <span className="text-xs font-extrabold bg-red-100 text-danger border border-danger/40 px-2 py-0.5 rounded-full">
-                      सहमती मागे घेतली
+                    <span className="font-mono text-xs font-bold bg-red-600 text-white px-2 py-0.5 uppercase tracking-wide">
+                      सहमती मागे घेतली [WITHDRAWN]
                     </span>
                   ) : m.bankVerified ? (
-                    <span className="text-xs font-extrabold bg-emerald-100 text-brand border border-brand/40 px-2 py-0.5 rounded-full">
-                      बँक पडताळणी पूर्ण ✓
+                    <span className="font-mono text-xs font-bold bg-emerald-100 text-emerald-950 border border-emerald-600 px-2 py-0.5 uppercase tracking-wide">
+                      बँक पडताळणी पूर्ण ✓ [VERIFIED]
                     </span>
                   ) : (
-                    <span className="text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-400 px-2 py-0.5 rounded-full">
-                      पडताळणी प्रलंबित ✕
+                    <span className="font-mono text-xs font-bold bg-amber-100 text-amber-950 border border-chaos-orange px-2 py-0.5 uppercase tracking-wide">
+                      पडताळणी प्रलंबित [UNVERIFIED]
                     </span>
                   )}
                 </div>
               </div>
 
               {/* Bank & Contact Details */}
-              <div className="mt-3 pt-2.5 border-t border-stone-200 grid grid-cols-2 gap-2 text-xs">
+              <div className="mt-3 pt-3 border-t border-dashed border-stone-300 grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs">
                 <div>
-                  <span className="text-text-muted block">बँक खाते:</span>
-                  <span className="font-bold text-stone-900 text-sm">
+                  <span className="text-chaos-muted uppercase block">बँक खाते (ACCOUNT):</span>
+                  <span className="font-bold text-chaos-black text-sm">
                     {m.bankAccountMasked} ({m.ifsc})
                   </span>
                 </div>
                 <div>
-                  <span className="text-text-muted block">मोबाईल नंबर:</span>
-                  <span className="font-bold text-stone-900 text-sm">
+                  <span className="text-chaos-muted uppercase block">मोबाईल क्रमांक (MOBILE):</span>
+                  <span className="font-bold text-chaos-black text-sm">
                     {m.mobile}
                   </span>
                 </div>
               </div>
 
               {/* Office Manager Actions */}
-              <div className="mt-3 pt-2 border-t border-stone-100 flex gap-2 justify-end">
+              <div className="mt-3 pt-3 border-t border-stone-200 flex flex-wrap gap-2 justify-end">
                 {!m.bankVerified && (
                   <button
                     onClick={() => handleVerifyBank(m.id, m.name)}
-                    className="text-xs font-extrabold px-3 py-1.5 bg-emerald-50 text-brand border border-brand rounded-lg active:bg-emerald-100"
+                    className="font-mono text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-emerald-700 text-white border-2 border-chaos-black shadow-tactile-sm hover:bg-emerald-800 transition-all active:translate-y-0.5"
                   >
-                    बँक पडताळणी करा (Verify Bank)
+                    बँक पडताळणी करा // VERIFY BANK
                   </button>
                 )}
                 {!m.consentWithdrawn && (
                   <button
                     onClick={() => handleWithdrawConsent(m.id, m.name)}
-                    className="text-xs font-extrabold px-3 py-1.5 text-stone-600 border border-stone-300 rounded-lg hover:text-danger hover:border-danger"
+                    className="font-mono text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-chaos-canvas text-chaos-black border-2 border-chaos-black shadow-tactile-sm hover:bg-red-600 hover:text-white transition-all active:translate-y-0.5"
                   >
-                    संमती मागे घ्या (Withdraw Consent)
+                    संमती मागे घ्या // WITHDRAW CONSENT
                   </button>
                 )}
               </div>
@@ -225,4 +251,3 @@ export const MemberList: React.FC = () => {
     </div>
   );
 };
-
