@@ -1,20 +1,96 @@
+@import "./fonts.css";
+@import "lenis/dist/lenis.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --base-100: #e3e3db;
+  --base-200: #ccccc4;
+  --base-300: #8c7e77;
+  --base-400: #1a1614;
+  --base-500: #ff6e14;
+
+  --accent-orange: #ff6e14;
+  --accent-emerald: #0d5c3a;
+  --accent-charcoal: #141211;
+
   color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: initial;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  touch-action: manipulation;
+  background-color: var(--base-100);
+  color: var(--base-400);
+  font-family: "PP Neue Montreal", "Noto Sans Devanagari", system-ui, sans-serif;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ensure 48px tap targets across all interactive buttons */
+/* Big Shoulders Display headings inspired by polite-chaos */
+h1, h2, h3, h4, .font-editorial {
+  font-family: "Big Shoulders Display", "PP Pangram Sans", sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+
+/* Technical Monospace tags */
+.font-mono, code, .code-tag {
+  font-family: "Geist Mono", monospace;
+}
+
+/* Ensure 48px minimum touch targets across buttons and inputs */
 button, input, select {
   font-family: inherit;
+  min-height: 44px;
 }
 
+/* Custom scrollbar matching polite-chaos aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--base-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--base-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--base-400);
+}
+
+/* Tactile button click feel */
+.btn-tactile {
+  transition: transform 0.1s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-tactile:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 0 #1a1614 !important;
+}
+
+/* Editorial Badge */
+.badge-chaos {
+  font-family: "Geist Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 700;
+}
