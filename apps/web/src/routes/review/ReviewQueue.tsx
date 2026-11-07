@@ -17,28 +17,28 @@ interface HeldPurchase {
 
 const FLAG_LABELS: Record<string, { label: string; desc: string }> = {
   [SyncHoldReason.DUPLICATE_FARMER]: {
-    label: "दुबार शेतकरी",
-    desc: "६० मिनिटांत दुसरी खरेदी नोंदवली गेली आहे (Duplicate Farmer)",
+    label: "दुबार शेतकरी (DUPLICATE)",
+    desc: "६० मिनिटांत दुसरी खरेदी नोंदवली गेली आहे (DUPLICATE IN 60 MIN)",
   },
   [SyncHoldReason.YIELD_HIGH]: {
-    label: "जास्त उत्पादन",
-    desc: "शेतजमिनीच्या मर्यादेपेक्षा जास्त वजन (Yield Quota Exceeded)",
+    label: "जास्त उत्पादन (YIELD EXCEEDED)",
+    desc: "शेतजमिनीच्या मर्यादेपेक्षा जास्त वजन (LAND QUOTA BREACH)",
   },
   [SyncHoldReason.UNIFORM_MOISTURE]: {
-    label: "ओलावा विसंगती",
-    desc: "सलग २० वाचनांमध्ये प्रमाण विचलन < ०.३ (Uniform Moisture)",
+    label: "ओलावा विसंगती (UNIFORM MOISTURE)",
+    desc: "सलग २० वाचनांमध्ये प्रमाण विचलन < ०.३ (STDEV < 0.3)",
   },
   [SyncHoldReason.CLOCK_SKEW]: {
-    label: "घड्याळ विसंगती",
-    desc: "मोबाईलचे घड्याळ सर्व्हरपेक्षा ६ तासांहून अधिक विसंगत (Clock Skew)",
+    label: "घड्याळ विसंगती (CLOCK SKEW)",
+    desc: "मोबाईलचे घड्याळ सर्व्हरपेक्षा ६ तासांहून अधिक विसंगत (SKEW > 6H)",
   },
   [SyncHoldReason.STALE_PRICE_VERSION]: {
-    label: "जुनी दर आवृत्ती",
-    desc: "ऑफलाइन काळात दर बदलला होता (Stale Price Version)",
+    label: "जुनी दर आवृत्ती (STALE PRICE)",
+    desc: "ऑफलाइन काळात दर बदलला होता (OUTDATED PRICE VERSION)",
   },
   [SyncHoldReason.CONSENT_WITHDRAWN]: {
-    label: "संमती मागे",
-    desc: "शेतकऱ्याने DPDP संमती मागे घेतलेली आहे (Consent Withdrawn)",
+    label: "संमती मागे (CONSENT WITHDRAWN)",
+    desc: "शेतकऱ्याने DPDP संमती मागे घेतलेली आहे (DPDP WITHDRAWAL)",
   },
 };
 
@@ -120,33 +120,41 @@ export function ReviewQueue() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="bg-white p-4 rounded-xl border border-stone-300 flex flex-wrap justify-between items-center gap-3">
+    <div className="flex flex-col gap-6 max-w-5xl mx-auto p-1 font-sans">
+      {/* Masthead */}
+      <div className="bg-chaos-paper border-2 border-chaos-black p-6 shadow-tactile flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-lg font-black text-stone-900">
-            📋 संशयित खरेदी पडताळणी रांग (Review Queue)
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-xs uppercase font-bold text-chaos-orange tracking-widest">
+              EXCEPTION AUDIT // पडताळणी रांग
+            </span>
+            <span className="font-mono text-[10px] bg-chaos-black text-white px-2 py-0.5 uppercase tracking-wider">
+              RISK ENGINE
+            </span>
+          </div>
+          <h2 className="font-display font-black text-3xl sm:text-4xl uppercase tracking-tight text-chaos-black">
+            संशयित खरेदी पडताळणी (REVIEW QUEUE)
           </h2>
-          <p className="text-xs text-stone-600 font-semibold mt-0.5">
-            प्रणालीने फ्लॅग केलेल्या संशयास्पद नोंदी. मंजुरीशिवाय या नोंदींचे पेमेंट केले जात नाही.
+          <p className="font-mono text-xs uppercase tracking-wider text-chaos-muted mt-1">
+            PAYMENT PREVENTED UNTIL EXPLICIT OFFICE AUTHORIZATION (§10)
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black px-3 py-1.5 rounded-lg">
-            प्रलंबित: {heldPurchases.length}
+          <span className="bg-chaos-canvas text-chaos-black border-2 border-chaos-black font-mono text-xs font-black px-3 py-1.5 shadow-tactile-sm uppercase">
+            HELD: {heldPurchases.length}
           </span>
-          <Button variant="secondary" onClick={fetchHeld} className="text-xs py-1.5">
-            🔄 रिफ्रेश
+          <Button variant="orange" onClick={fetchHeld} className="text-xs py-1.5 shadow-tactile-sm">
+            🔄 REFRESH
           </Button>
         </div>
       </div>
 
       {actionNotice && (
-        <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold p-3 rounded-xl flex justify-between items-center">
+        <div className="bg-emerald-50 border-2 border-emerald-600 text-emerald-950 font-mono text-xs font-bold p-3.5 shadow-tactile-sm flex justify-between items-center uppercase tracking-wide">
           <span>✓ {actionNotice}</span>
           <button
             onClick={() => setActionNotice(null)}
-            className="text-stone-500 hover:text-stone-900 font-black text-sm ml-2"
+            className="font-mono text-xs text-chaos-muted hover:text-chaos-black font-black ml-2"
           >
             ✕
           </button>
@@ -154,62 +162,63 @@ export function ReviewQueue() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-300 text-red-900 text-xs font-bold p-3 rounded-xl">
-          ⚠️ {error}
+        <div className="bg-red-50 border-2 border-red-600 text-red-900 font-mono text-xs font-bold p-3.5 shadow-tactile-sm uppercase tracking-wide">
+          [!] {error}
         </div>
       )}
 
       {loading ? (
-        <div className="p-8 text-center text-stone-500 font-bold text-sm bg-white rounded-xl border border-stone-200">
-          ⏳ पडताळणी रांग लोड होत आहे...
+        <div className="p-12 text-center text-chaos-muted font-mono text-xs uppercase tracking-wider bg-chaos-paper border-2 border-dashed border-chaos-black/40">
+          [ ⏳ पडताळणी रांग लोड होत आहे // QUERYING EXCEPTION STORE... ]
         </div>
       ) : heldPurchases.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-stone-200 flex flex-col items-center gap-2">
-          <span className="text-3xl">🎉</span>
-          <span className="font-bold text-stone-800 text-sm">
-            सध्या पुनरावलोकनासाठी कोणतीही खरेदी प्रलंबित नाही.
+        <div className="p-12 text-center bg-chaos-paper border-2 border-dashed border-chaos-black/40 flex flex-col items-center gap-2 shadow-tactile">
+          <span className="font-display font-black text-3xl uppercase tracking-tight text-chaos-black">
+            ALL EXCEPTION FLAGS RESOLVED
           </span>
-          <span className="text-xs text-stone-500">
-            सर्व खरेदी नियमांनुसार वैध ठरल्या आहेत.
-          </span>
+          <p className="font-mono text-xs text-chaos-muted uppercase tracking-wider">
+            सध्या पुनरावलोकनासाठी कोणतीही खरेदी प्रलंबित नाही • NO TRANSACTIONS BLOCKED
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {heldPurchases.map((item) => (
             <div
               key={item.id}
-              className="bg-white border-2 border-amber-400/80 rounded-xl p-4 shadow-sm flex flex-col gap-3"
+              className="bg-chaos-paper border-2 border-chaos-black p-5 shadow-tactile flex flex-col gap-3"
             >
-              <div className="flex flex-wrap justify-between items-start gap-2 border-b border-stone-200 pb-3">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3 border-b-2 border-chaos-black pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-black text-stone-900 text-base">
+                    <span className="font-sans font-black text-chaos-black text-lg">
                       {item.farmerName}
                     </span>
-                    <span className="text-xs font-mono font-bold bg-stone-100 text-stone-700 px-2 py-0.5 rounded">
+                    <span className="font-mono text-xs font-bold bg-chaos-black text-chaos-orange px-2 py-0.5">
                       {item.farmerCode}
                     </span>
                   </div>
-                  <span className="text-xs text-stone-500 font-medium">
-                    पावती क्र: <b>{item.slipNo}</b> • {new Date(item.clientTime).toLocaleString("mr-IN")}
+                  <span className="font-mono text-xs text-chaos-muted uppercase block mt-0.5">
+                    पावती क्र: <b>{item.slipNo}</b> • {new Date(item.clientTime).toLocaleString("en-IN")}
                   </span>
                 </div>
 
-                <div className="text-right">
-                  <span className="text-xs font-bold text-stone-500 block">एकूण रक्कम:</span>
-                  <span className="text-lg font-black text-emerald-800">
+                <div className="text-left sm:text-right">
+                  <span className="font-mono text-[11px] font-bold text-chaos-muted uppercase block">
+                    एकूण रक्कम (PAYABLE):
+                  </span>
+                  <span className="font-display font-black text-2xl text-chaos-black">
                     {formatRupees(item.amountRupees * 100)}
                   </span>
-                  <span className="text-xs text-stone-600 block font-semibold">
-                    वजन: <b>{item.netKg.toFixed(1)} किग्रॅ</b> • {item.crop}
+                  <span className="font-mono text-xs text-chaos-muted block">
+                    वजन: <b className="text-chaos-black">{item.netKg.toFixed(1)} KG</b> • {item.crop}
                   </span>
                 </div>
               </div>
 
               {/* Flags Triggered */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-black uppercase tracking-wider text-amber-900">
-                  कारणे / फ्लॅग (Flag Reasons):
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-orange">
+                  [ ⚠️ कारणीभूत फ्लॅग // RISK SIGNALS TRIGGERED ]:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {item.flagCodes.map((code) => {
@@ -217,10 +226,10 @@ export function ReviewQueue() {
                     return (
                       <div
                         key={code}
-                        className="bg-amber-100/80 border border-amber-300 text-amber-950 px-2.5 py-1 rounded-lg text-xs"
+                        className="bg-chaos-canvas border-2 border-chaos-black p-2 font-mono text-xs shadow-tactile-sm"
                       >
-                        <span className="font-black">{info.label}</span>
-                        <span className="text-[11px] text-amber-800 block">{info.desc}</span>
+                        <span className="font-black text-chaos-black block">{info.label}</span>
+                        <span className="text-[10px] text-chaos-muted uppercase block mt-0.5">{info.desc}</span>
                       </div>
                     );
                   })}
@@ -228,15 +237,15 @@ export function ReviewQueue() {
               </div>
 
               {/* Note input & Actions */}
-              <div className="mt-1 pt-3 border-t border-stone-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="mt-2 pt-3 border-t-2 border-chaos-black flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 <input
                   type="text"
-                  placeholder="व्यवस्थापक शेरा / कारण टाका (Optional note)..."
+                  placeholder="व्यवस्थापक शेरा टाका // AUDIT RESOLUTION NOTE..."
                   value={reviewNote[item.id] || ""}
                   onChange={(e) =>
                     setReviewNote((prev) => ({ ...prev, [item.id]: e.target.value }))
                   }
-                  className="flex-1 text-xs p-2 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-600"
+                  className="flex-1 font-mono text-xs p-2.5 border-2 border-chaos-black bg-white focus:outline-none focus:shadow-tactile-orange"
                 />
 
                 <div className="flex gap-2">
@@ -244,17 +253,17 @@ export function ReviewQueue() {
                     type="button"
                     disabled={submittingId === item.id}
                     onClick={() => handleRelease(item.id)}
-                    className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black px-4 py-2 rounded-lg transition-all active:scale-95 whitespace-nowrap"
+                    className="font-mono text-xs font-bold uppercase tracking-wider bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2.5 border-2 border-chaos-black shadow-tactile-sm transition-all active:translate-y-0.5 whitespace-nowrap"
                   >
-                    ✓ मंजूर करा (Approve)
+                    ✓ मंजूर करा // APPROVE
                   </button>
                   <button
                     type="button"
                     disabled={submittingId === item.id}
                     onClick={() => handleHold(item.id)}
-                    className="bg-stone-700 hover:bg-stone-800 text-white text-xs font-black px-3 py-2 rounded-lg transition-all active:scale-95 whitespace-nowrap"
+                    className="font-mono text-xs font-bold uppercase tracking-wider bg-chaos-black hover:bg-stone-800 text-white px-3 py-2.5 border-2 border-chaos-black shadow-tactile-sm transition-all active:translate-y-0.5 whitespace-nowrap"
                   >
-                    होल्ड ठेवा (Keep Held)
+                    होल्ड ठेवा // KEEP HELD
                   </button>
                 </div>
               </div>
@@ -265,4 +274,3 @@ export function ReviewQueue() {
     </div>
   );
 }
-

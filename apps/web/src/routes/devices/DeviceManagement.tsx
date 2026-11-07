@@ -69,29 +69,37 @@ export function DeviceManagement() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="bg-white p-4 rounded-xl border border-stone-300 flex flex-wrap justify-between items-center gap-3">
+    <div className="flex flex-col gap-6 max-w-5xl mx-auto p-1 font-sans">
+      {/* Masthead */}
+      <div className="bg-chaos-paper border-2 border-chaos-black p-6 shadow-tactile flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-lg font-black text-stone-900">
-            📱 केंद्र साधने व सुरक्षा व्यवस्थापन (Device Management)
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-xs uppercase font-bold text-chaos-orange tracking-widest">
+              HARDWARE ENCLAVE REGISTRY // साधने
+            </span>
+            <span className="font-mono text-[10px] bg-chaos-black text-white px-2 py-0.5 uppercase tracking-wider">
+              ECDSA P-256
+            </span>
+          </div>
+          <h2 className="font-display font-black text-3xl sm:text-4xl uppercase tracking-tight text-chaos-black">
+            केंद्र साधने व सुरक्षा व्यवस्थापन (DEVICES)
           </h2>
-          <p className="text-xs text-stone-600 font-semibold mt-0.5">
-            खरेदी केंद्रातील नोंदणीकृत मोबाईल्स आणि त्यांचे क्रिप्टोग्राफिक कीपेअर नियंत्रण (§9.1, §9.7).
+          <p className="font-mono text-xs uppercase tracking-wider text-chaos-muted mt-1">
+            FIELD WEIGHMENT SMARTPHONES & CRYPTOGRAPHIC IDENTITY REPOSITORY (§9.1, §9.7)
           </p>
         </div>
 
-        <Button variant="secondary" onClick={fetchDevices} className="text-xs py-1.5">
-          🔄 रिफ्रेश
+        <Button variant="orange" onClick={fetchDevices} className="text-xs py-2 shadow-tactile-sm">
+          🔄 REFRESH DEVICES
         </Button>
       </div>
 
       {notice && (
-        <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold p-3 rounded-xl flex justify-between items-center">
+        <div className="bg-emerald-50 border-2 border-emerald-600 text-emerald-950 font-mono text-xs font-bold p-3.5 shadow-tactile-sm flex justify-between items-center uppercase tracking-wide">
           <span>✓ {notice}</span>
           <button
             onClick={() => setNotice(null)}
-            className="text-stone-500 hover:text-stone-900 font-black text-sm ml-2"
+            className="font-mono text-xs text-chaos-muted hover:text-chaos-black font-black ml-2"
           >
             ✕
           </button>
@@ -99,63 +107,65 @@ export function DeviceManagement() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-300 text-red-900 text-xs font-bold p-3 rounded-xl">
-          ⚠️ {error}
+        <div className="bg-red-50 border-2 border-red-600 text-red-900 font-mono text-xs font-bold p-3.5 shadow-tactile-sm uppercase tracking-wide">
+          [!] {error}
         </div>
       )}
 
       {loading ? (
-        <div className="p-8 text-center text-stone-500 font-bold text-sm bg-white rounded-xl border border-stone-200">
-          ⏳ साधने लोड होत आहेत...
+        <div className="p-12 text-center text-chaos-muted font-mono text-xs uppercase tracking-wider bg-chaos-paper border-2 border-dashed border-chaos-black/40">
+          [ ⏳ साधने लोड होत आहेत // QUERYING REGISTERED DEVICES... ]
         </div>
       ) : devices.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-stone-200">
-          <span className="text-xs text-stone-500 font-bold">कोणतेही नोंदणीकृत साधन आढळले नाही.</span>
+        <div className="p-12 text-center bg-chaos-paper border-2 border-dashed border-chaos-black/40 shadow-tactile">
+          <span className="font-mono text-xs text-chaos-muted font-bold uppercase tracking-wider">
+            [ कोणतेही नोंदणीकृत साधन आढळले नाही // NO DEVICES REGISTERED ]
+          </span>
         </div>
       ) : (
-        <div className="bg-white border border-stone-300 rounded-xl overflow-hidden shadow-sm">
-          <div className="p-3 bg-stone-50 border-b border-stone-200 text-xs font-bold text-stone-700 flex justify-between items-center">
-            <span>साधन व केंद्र तपशील</span>
-            <span>स्थिती व कृती</span>
+        <div className="bg-chaos-paper border-2 border-chaos-black shadow-tactile overflow-hidden">
+          <div className="p-3.5 bg-chaos-canvas border-b-2 border-chaos-black font-mono text-xs font-bold text-chaos-black uppercase tracking-wider flex justify-between items-center">
+            <span>साधन व केंद्र तपशील (DEVICE IDENTITY)</span>
+            <span>स्थिती व कृती (REVOCATION)</span>
           </div>
 
-          <div className="divide-y divide-stone-200">
+          <div className="divide-y border-chaos-black/20">
             {devices.map((d) => {
               const isRevoked = !!d.revokedAt;
               return (
-                <div key={d.id} className="p-4 flex flex-wrap justify-between items-center gap-3">
+                <div key={d.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-white transition-colors">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-black text-stone-900 text-sm">
+                      <span className="font-mono font-black text-chaos-black text-sm">
                         {d.id}
                       </span>
-                      <span className="bg-stone-100 text-stone-700 text-xs font-bold px-2 py-0.5 rounded">
-                        केंद्र: {d.centreCode || d.centreId} ({d.centreName || "लातूर"})
+                      <span className="font-mono text-xs font-bold bg-chaos-canvas border border-chaos-black/30 px-2 py-0.5">
+                        CENTRE: {d.centreCode || d.centreId} ({d.centreName || "लातूर"})
                       </span>
                     </div>
 
-                    <div className="text-xs text-stone-600 font-medium">
-                      <span>ऑपरेटर: <b>{d.userName || d.userId}</b></span> •{" "}
-                      <span>नोंदणी: {new Date(d.registeredAt).toLocaleString("mr-IN")}</span>
+                    <div className="font-mono text-xs text-chaos-muted">
+                      <span>ऑपरेटर: <b className="text-chaos-black">{d.userName || d.userId}</b></span> •{" "}
+                      <span>नोंदणी: {new Date(d.registeredAt).toLocaleString("en-IN")}</span>
                     </div>
 
                     {isRevoked && (
-                      <div className="text-xs text-red-700 font-bold mt-1">
-                        रद्द दिनांक: {new Date(d.revokedAt!).toLocaleString("mr-IN")}
-                        {d.revocationReason && ` (कारण: ${d.revocationReason})`}
+                      <div className="font-mono text-xs text-red-700 font-bold mt-1 uppercase">
+                        [!] REVOKED: {new Date(d.revokedAt!).toLocaleString("en-IN")}
+                        {d.revocationReason && ` (${d.revocationReason})`}
                       </div>
                     )}
                   </div>
 
                   <div className="flex items-center gap-3">
                     <span
-                      className={`text-xs font-black px-2.5 py-1 rounded-lg ${
+                      className={`font-mono text-xs font-bold px-2.5 py-1 uppercase tracking-wider border ${
                         isRevoked
-                          ? "bg-red-100 text-red-900 border border-red-300"
-                          : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                          ? "bg-red-100 text-red-950 border-red-600"
+                          : "bg-emerald-100 text-emerald-950 border-emerald-600"
                       }`}
                     >
-                      {isRevoked ? "रद्द (Revoked)" : "सक्रिय (Active)"}
+                      {isRevoked ? "रद्द // REVOKED" : "सक्रिय // ACTIVE"}
                     </span>
 
                     {!isRevoked && (
@@ -163,9 +173,9 @@ export function DeviceManagement() {
                         type="button"
                         disabled={revokingId === d.id}
                         onClick={() => handleRevoke(d.id)}
-                        className="bg-red-50 hover:bg-red-100 border border-red-300 text-red-900 text-xs font-black px-3 py-1.5 rounded-lg transition-all active:scale-95"
+                        className="font-mono text-xs font-bold uppercase tracking-wider bg-chaos-canvas hover:bg-red-600 hover:text-white border-2 border-chaos-black text-chaos-black px-3 py-1.5 shadow-tactile-sm transition-all active:translate-y-0.5"
                       >
-                        {revokingId === d.id ? "रद्द होत आहे..." : "साधन रद्द करा (Revoke)"}
+                        {revokingId === d.id ? "रद्द होत आहे..." : "साधन रद्द करा // REVOKE"}
                       </button>
                     )}
                   </div>
@@ -178,4 +188,3 @@ export function DeviceManagement() {
     </div>
   );
 }
-

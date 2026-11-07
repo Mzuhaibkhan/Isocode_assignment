@@ -50,72 +50,84 @@ export function SmsLogView() {
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header and Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 rounded-xl border border-stone-300 shadow-sm">
+    <div className="flex flex-col gap-6 max-w-5xl mx-auto p-1 font-sans">
+      {/* Masthead */}
+      <div className="bg-chaos-paper border-2 border-chaos-black p-6 shadow-tactile flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-xl font-black text-stone-900">💬 SMS नोंदी (SMS Audit Log)</h2>
-          <p className="text-xs text-stone-600 font-semibold">
-            शेतकऱ्यांना पाठवलेल्या सर्व डिजिटल पावत्यांची पारदर्शक नोंद (§11)
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-xs uppercase font-bold text-chaos-orange tracking-widest">
+              DISPATCH AUDIT // SMS नोंदी
+            </span>
+            <span className="font-mono text-[10px] bg-chaos-black text-white px-2 py-0.5 uppercase tracking-wider">
+              TELECOM GATEWAY
+            </span>
+          </div>
+          <h2 className="font-display font-black text-3xl sm:text-4xl uppercase tracking-tight text-chaos-black">
+            SMS नोंदी (SMS AUDIT LOG)
+          </h2>
+          <p className="font-mono text-xs uppercase tracking-wider text-chaos-muted mt-1">
+            TRANSPARENT SMS RECEIPT ARCHIVE DISPATCHED TO FARMERS (§11)
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 w-full md:w-auto">
           <input
             type="text"
-            placeholder="पावती किंवा मोबाइलने शोधा..."
+            placeholder="पावती किंवा मोबाईलने शोधा... (FILTER)"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="px-3 py-2 text-xs border border-stone-400 rounded-lg flex-1 sm:w-48"
+            className="px-3.5 py-2 font-mono text-xs border-2 border-chaos-black bg-white focus:outline-none focus:shadow-tactile-orange flex-1 md:w-56"
           />
-          <Button variant="secondary" onClick={fetchLogs} className="text-xs py-2 px-3">
-            ताजे करा (Refresh)
+          <Button variant="orange" onClick={fetchLogs} className="text-xs py-2 px-3.5 shadow-tactile-sm">
+            REFRESH
           </Button>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-300 text-red-800 text-xs font-bold rounded-xl">
-          ⚠️ {error}
+        <div className="p-3.5 bg-red-50 border-2 border-red-600 text-red-900 font-mono text-xs font-bold uppercase tracking-wide shadow-tactile-sm">
+          [!] {error}
         </div>
       )}
 
       {/* Messages List */}
       {loading ? (
-        <div className="text-center py-12 text-stone-500 font-bold">लोड होत आहे...</div>
+        <div className="p-12 text-center text-chaos-muted font-mono text-xs uppercase tracking-wider bg-chaos-paper border-2 border-dashed border-chaos-black/40">
+          [ ⏳ SMS नोंदी लोड होत आहेत // QUERYING SMS GATEWAY AUDIT... ]
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-stone-500 bg-white rounded-xl border border-dashed border-stone-300 font-bold">
-          कोणतीही SMS नोंद सापडली नाही
+        <div className="p-12 text-center bg-chaos-paper border-2 border-dashed border-chaos-black/40 font-mono text-xs uppercase tracking-wider text-chaos-muted shadow-tactile">
+          [ कोणतीही SMS नोंद सापडली नाही // NO SMS LOGS FOUND ]
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map((msg) => (
             <div
               key={msg.id}
-              className="bg-white border-2 border-stone-300 rounded-xl p-4 shadow-sm flex flex-col justify-between gap-3"
+              className="bg-chaos-paper border-2 border-chaos-black p-5 shadow-tactile flex flex-col justify-between gap-3.5"
             >
-              <div className="flex justify-between items-start border-b border-stone-200 pb-2">
+              <div className="flex justify-between items-start border-b-2 border-chaos-black pb-2.5">
                 <div>
-                  <span className="text-xs font-black text-brand bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  <span className="font-mono text-xs font-black bg-chaos-black text-chaos-orange px-2 py-0.5">
                     {msg.slipNo || "पावती"}
                   </span>
-                  <span className="text-xs text-stone-500 ml-2 font-mono">
+                  <span className="font-mono text-xs text-chaos-muted ml-2 font-bold">
                     📱 {msg.toMobileMasked}
                   </span>
                 </div>
-                <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                  {msg.status === "sent" ? "पाठवला ✓" : msg.status}
+                <span className="font-mono text-[10px] font-bold uppercase bg-emerald-100 text-emerald-950 border border-emerald-600 px-2 py-0.5">
+                  {msg.status === "sent" ? "SENT ✓" : msg.status}
                 </span>
               </div>
 
               {/* Marathi SMS Body (§11) */}
-              <div className="bg-stone-50 p-3 rounded-lg border border-stone-200 text-xs font-mono whitespace-pre-line text-stone-900 leading-relaxed">
+              <div className="bg-white p-3.5 border-2 border-chaos-black font-mono text-xs whitespace-pre-line text-chaos-black leading-relaxed shadow-tactile-sm">
                 {msg.body}
               </div>
 
-              <div className="flex justify-between items-center text-[10px] text-stone-500">
-                <span>वेळ: {new Date(msg.sentAt).toLocaleString("mr-IN")}</span>
-                <span className="font-mono text-stone-400">ID: {msg.id.slice(0, 14)}...</span>
+              <div className="flex justify-between items-center font-mono text-[10px] text-chaos-muted uppercase">
+                <span>वेळ: {new Date(msg.sentAt).toLocaleString("en-IN")}</span>
+                <span>ID: {msg.id.slice(0, 16)}...</span>
               </div>
             </div>
           ))}

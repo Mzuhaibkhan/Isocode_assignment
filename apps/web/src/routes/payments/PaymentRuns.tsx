@@ -75,7 +75,6 @@ export function PaymentRuns() {
       if (!res.ok) throw new Error(`सर्व्हर त्रुटी: ${res.status}`);
       const data = await res.json();
       setEligible(data.eligiblePurchases || []);
-      // Select all by default
       const ids = new Set<string>((data.eligiblePurchases || []).map((p: any) => p.id));
       setSelectedPurchaseIds(ids);
     } catch (err: any) {
@@ -162,7 +161,6 @@ export function PaymentRuns() {
           result.totalAmountPaise
         )}.`
       );
-      // Switch to history tab and select the created run
       setSelectedRunId(result.runId);
       setActiveSubTab("runs");
     } catch (err: any) {
@@ -229,7 +227,6 @@ export function PaymentRuns() {
     }
   };
 
-  // Selection toggle
   const toggleSelect = (id: string) => {
     setSelectedPurchaseIds((prev) => {
       const next = new Set(prev);
@@ -239,55 +236,62 @@ export function PaymentRuns() {
     });
   };
 
-  // Computations for eligible tab
   const selectedEligible = eligible.filter((p) => selectedPurchaseIds.has(p.id));
   const selectedTotalPaise = selectedEligible.reduce((acc, p) => acc + p.amountPaise, 0);
   const selectedUniqueFarmers = new Set(selectedEligible.map((p) => p.memberId)).size;
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Top Banner */}
-      <div className="bg-white p-4 rounded-xl border border-stone-300 flex flex-wrap justify-between items-center gap-3">
+    <div className="flex flex-col gap-6 max-w-5xl mx-auto p-1 font-sans">
+      {/* Top Brutalist Masthead */}
+      <div className="bg-chaos-paper border-2 border-chaos-black p-6 shadow-tactile flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-lg font-black text-stone-900">
-            💳 शेतकरी बँक देयक व पेमेंट फाईल (Payment Runs & Bank Files)
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-xs uppercase font-bold text-chaos-orange tracking-widest">
+              DIRECT BENEFIT DISBURSEMENT // देयक फाईल
+            </span>
+            <span className="font-mono text-[10px] bg-chaos-black text-white px-2 py-0.5 uppercase tracking-wider">
+              BANK CSV EXPORT
+            </span>
+          </div>
+          <h2 className="font-display font-black text-3xl sm:text-4xl uppercase tracking-tight text-chaos-black">
+            शेतकरी बँक देयक व पेमेंट फाईल (PAYMENT RUNS)
           </h2>
-          <p className="text-xs text-stone-600 font-semibold mt-0.5">
-            मंजूर खरेदीच्या स्नॅपशॉटवरून एका क्लिकवर बँकेची CSV फाईल तयार करा (§12).
+          <p className="font-mono text-xs uppercase tracking-wider text-chaos-muted mt-1">
+            IMMUTABLE SNAPSHOT BATCH DISBURSEMENT ENGINE (§12)
           </p>
         </div>
 
         {/* Sub-tabs */}
-        <div className="flex bg-stone-100 p-1 rounded-xl border border-stone-300 gap-1 text-xs font-bold">
+        <div className="flex gap-2">
           <button
             onClick={() => setActiveSubTab("eligible")}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
+            className={`min-h-[44px] px-4 py-2 border-2 font-mono text-xs uppercase font-bold tracking-wider transition-all ${
               activeSubTab === "eligible"
-                ? "bg-emerald-700 text-white shadow-sm"
-                : "text-stone-700 hover:text-stone-950"
+                ? "bg-chaos-black text-white border-chaos-black shadow-tactile-orange translate-y-[-1px]"
+                : "bg-chaos-canvas text-chaos-black border-chaos-black hover:bg-white"
             }`}
           >
-            पात्र खरेदी (Eligible Purchases)
+            01. पात्र खरेदी [ELIGIBLE]
           </button>
           <button
             onClick={() => setActiveSubTab("runs")}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
+            className={`min-h-[44px] px-4 py-2 border-2 font-mono text-xs uppercase font-bold tracking-wider transition-all ${
               activeSubTab === "runs"
-                ? "bg-emerald-700 text-white shadow-sm"
-                : "text-stone-700 hover:text-stone-950"
+                ? "bg-chaos-black text-white border-chaos-black shadow-tactile-orange translate-y-[-1px]"
+                : "bg-chaos-canvas text-chaos-black border-chaos-black hover:bg-white"
             }`}
           >
-            पेमेंट रन्स इतिहास (History)
+            02. रन्स इतिहास [HISTORY]
           </button>
         </div>
       </div>
 
       {notice && (
-        <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold p-3 rounded-xl flex justify-between items-center">
+        <div className="bg-emerald-50 border-2 border-emerald-600 text-emerald-950 font-mono text-xs font-bold p-3.5 shadow-tactile-sm flex justify-between items-center uppercase tracking-wide">
           <span>✓ {notice}</span>
           <button
             onClick={() => setNotice(null)}
-            className="text-stone-500 hover:text-stone-900 font-black text-sm ml-2"
+            className="font-mono text-xs text-chaos-muted hover:text-chaos-black font-black ml-2"
           >
             ✕
           </button>
@@ -295,58 +299,57 @@ export function PaymentRuns() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-300 text-red-900 text-xs font-bold p-3 rounded-xl">
-          ⚠️ {error}
+        <div className="bg-red-50 border-2 border-red-600 text-red-900 font-mono text-xs font-bold p-3.5 shadow-tactile-sm uppercase tracking-wide">
+          [!] {error}
         </div>
       )}
 
       {/* SUB-TAB 1: ELIGIBLE PURCHASES */}
       {activeSubTab === "eligible" && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
           {/* Summary Box & Create Button */}
-          <div className="bg-emerald-950 text-white p-4 rounded-xl flex flex-wrap justify-between items-center gap-3">
+          <div className="bg-chaos-black text-chaos-canvas border-2 border-chaos-black p-6 shadow-tactile-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <span className="text-xs font-bold text-emerald-300 uppercase block">
-                निवडलेल्या खरेदीचा सारांश (Selection Summary)
+              <span className="font-mono text-xs font-bold text-chaos-orange uppercase tracking-widest block">
+                निवडलेल्या खरेदीचा सारांश // SELECTION SUMMARY
               </span>
               <div className="flex items-baseline gap-3 mt-1">
-                <span className="text-2xl font-black text-white">
+                <span className="font-display font-black text-4xl sm:text-5xl text-white tracking-tight">
                   {formatRupees(selectedTotalPaise)}
                 </span>
-                <span className="text-xs text-emerald-200 font-semibold">
-                  ({selectedUniqueFarmers} शेतकरी • {selectedEligible.length} पावत्या)
+                <span className="font-mono text-xs text-chaos-muted uppercase">
+                  ({selectedUniqueFarmers} FARMERS • {selectedEligible.length} SLIPS)
                 </span>
               </div>
             </div>
 
             <Button
-              variant="primary"
+              variant="orange"
               disabled={creatingRun || selectedEligible.length === 0}
               onClick={handleCreateRun}
-              className="bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black text-sm py-2.5 px-5"
+              className="shadow-tactile-sm whitespace-nowrap text-sm py-3 px-6 font-mono font-bold uppercase"
             >
-              {creatingRun ? "फाईल तयार होत आहे..." : "📄 पेमेंट रन तयार करा (Generate Run)"}
+              {creatingRun ? "GEN RUN..." : "📄 तयार करा // GENERATE PAYMENT RUN"}
             </Button>
           </div>
 
           {loadingEligible ? (
-            <div className="p-8 text-center text-stone-500 font-bold text-sm bg-white rounded-xl border border-stone-200">
-              ⏳ देयकासाठी पात्र नोंदी शोधत आहे...
+            <div className="p-12 text-center text-chaos-muted font-mono text-xs uppercase tracking-wider bg-chaos-paper border-2 border-dashed border-chaos-black/40">
+              [ ⏳ देयकासाठी पात्र नोंदी शोधत आहे // QUERYING ELIGIBLE PURCHASES... ]
             </div>
           ) : eligible.length === 0 ? (
-            <div className="p-12 text-center bg-white rounded-xl border border-stone-200 flex flex-col items-center gap-2">
-              <span className="text-3xl">🌾</span>
-              <span className="font-bold text-stone-800 text-sm">
-                देयकासाठी सध्या कोणतीही नवीन मंजूर खरेदी उपलब्ध नाही.
+            <div className="p-12 text-center bg-chaos-paper border-2 border-dashed border-chaos-black/40 shadow-tactile flex flex-col items-center gap-2">
+              <span className="font-display font-black text-3xl uppercase tracking-tight text-chaos-black">
+                NO PENDING ELIGIBLE PURCHASES
               </span>
-              <span className="text-xs text-stone-500">
-                नवीन खरेदी सिंक झाल्यावर किंवा पडताळणी रांगेतून मंजूर झाल्यावर येथे दिसेल.
-              </span>
+              <p className="font-mono text-xs text-chaos-muted uppercase tracking-wider">
+                देयकासाठी सध्या कोणतीही नवीन मंजूर खरेदी उपलब्ध नाही • ALL BATCHES PROCESSED
+              </p>
             </div>
           ) : (
-            <div className="bg-white border border-stone-300 rounded-xl overflow-hidden shadow-sm">
-              <div className="p-3 bg-stone-50 border-b border-stone-200 flex justify-between items-center text-xs font-bold text-stone-700">
-                <label className="flex items-center gap-2 cursor-pointer">
+            <div className="bg-chaos-paper border-2 border-chaos-black shadow-tactile overflow-hidden">
+              <div className="p-3.5 bg-chaos-canvas border-b-2 border-chaos-black flex justify-between items-center font-mono text-xs font-bold text-chaos-black uppercase tracking-wider">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={selectedPurchaseIds.size === eligible.length}
@@ -357,43 +360,43 @@ export function PaymentRuns() {
                         setSelectedPurchaseIds(new Set());
                       }
                     }}
-                    className="w-4 h-4 rounded text-emerald-600"
+                    className="w-4 h-4 rounded-none border-2 border-chaos-black text-chaos-black accent-chaos-orange cursor-pointer"
                   />
-                  <span>सर्व निवडा ({eligible.length})</span>
+                  <span>SELECT ALL ({eligible.length})</span>
                 </label>
                 <span>पावती व शेतकरी तपशील</span>
-                <span>रक्कम</span>
+                <span>रक्कम (AMOUNT)</span>
               </div>
 
-              <div className="divide-y divide-stone-200">
+              <div className="divide-y border-chaos-black/20">
                 {eligible.map((p) => (
                   <div
                     key={p.id}
                     onClick={() => toggleSelect(p.id)}
-                    className="p-3 flex items-center justify-between gap-3 hover:bg-stone-50 cursor-pointer"
+                    className="p-3.5 flex items-center justify-between gap-3 hover:bg-white cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         checked={selectedPurchaseIds.has(p.id)}
-                        onChange={() => {}} // Handled by div onClick
-                        className="w-4 h-4 rounded text-emerald-600 pointer-events-none"
+                        onChange={() => {}}
+                        className="w-4 h-4 rounded-none border-2 border-chaos-black text-chaos-black accent-chaos-orange pointer-events-none"
                       />
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-black text-stone-900 text-sm">{p.farmerName}</span>
-                          <span className="text-[11px] font-mono bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded font-bold">
+                          <span className="font-sans font-black text-chaos-black text-base">{p.farmerName}</span>
+                          <span className="font-mono text-xs font-bold bg-chaos-canvas border border-chaos-black/30 px-1.5 py-0.2">
                             {p.farmerCode}
                           </span>
                         </div>
-                        <span className="text-xs text-stone-500 font-medium">
-                          पावती: <b>{p.slipNo}</b> • {p.crop} ({(p.netKg).toFixed(1)} किग्रॅ)
+                        <span className="font-mono text-xs text-chaos-muted uppercase mt-0.5 block">
+                          पावती: <b>{p.slipNo}</b> • {p.crop} ({(p.netKg).toFixed(1)} KG)
                         </span>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-sm font-black text-emerald-800">
+                      <span className="font-display font-black text-xl text-chaos-black">
                         {formatRupees(p.amountPaise)}
                       </span>
                     </div>
@@ -407,75 +410,75 @@ export function PaymentRuns() {
 
       {/* SUB-TAB 2: PAYMENT RUNS HISTORY & DETAIL */}
       {activeSubTab === "runs" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Left: Runs List */}
-          <div className="md:col-span-1 flex flex-col gap-2">
-            <span className="text-xs font-black uppercase tracking-wider text-stone-600 px-1">
-              पेमेंट रन्स यादी ({runs.length})
+          <div className="lg:col-span-1 flex flex-col gap-2.5">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-muted px-1">
+              पेमेंट रन्स यादी // RUNS ARCHIVE ({runs.length})
             </span>
 
             {loadingRuns ? (
-              <div className="p-4 text-center text-xs text-stone-500 font-bold bg-white rounded-xl border border-stone-200">
-                ⏳ रन्स लोड होत आहेत...
+              <div className="p-8 text-center font-mono text-xs uppercase text-chaos-muted bg-chaos-paper border-2 border-dashed border-chaos-black/40">
+                [ ⏳ रन्स लोड होत आहेत... ]
               </div>
             ) : runs.length === 0 ? (
-              <div className="p-6 text-center text-xs text-stone-500 font-bold bg-white rounded-xl border border-stone-200">
-                अद्याप कोणताही पेमेंट रन तयार केलेला नाही.
+              <div className="p-8 text-center font-mono text-xs uppercase text-chaos-muted bg-chaos-paper border-2 border-dashed border-chaos-black/40">
+                [ अद्याप कोणताही पेमेंट रन तयार केलेला नाही ]
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5">
                 {runs.map((r) => {
                   const isSelected = selectedRunId === r.id;
                   return (
                     <div
                       key={r.id}
                       onClick={() => setSelectedRunId(r.id)}
-                      className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                      className={`p-4 border-2 cursor-pointer transition-all ${
                         isSelected
-                          ? "bg-stone-900 text-white border-stone-900 shadow-md"
-                          : "bg-white text-stone-900 border-stone-200 hover:border-stone-400"
+                          ? "bg-chaos-black text-white border-chaos-black shadow-tactile-orange translate-y-[-1px]"
+                          : "bg-chaos-paper text-chaos-black border-chaos-black hover:bg-white shadow-tactile-sm"
                       }`}
                     >
                       <div className="flex justify-between items-start">
                         <span className="font-mono text-xs font-black">
-                          {r.id.slice(0, 14)}...
+                          {r.id.slice(0, 16)}...
                         </span>
                         <span
-                          className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                          className={`font-mono text-[10px] font-bold px-1.5 py-0.5 border ${
                             r.kind === "retry"
-                              ? "bg-amber-400 text-stone-950"
+                              ? "bg-chaos-orange text-chaos-black border-chaos-black"
                               : isSelected
-                              ? "bg-emerald-500 text-stone-950"
-                              : "bg-emerald-100 text-emerald-900"
+                              ? "bg-white text-chaos-black border-white"
+                              : "bg-chaos-canvas text-chaos-black border-chaos-black"
                           }`}
                         >
-                          {r.kind === "retry" ? "रीट्राय (Retry)" : "प्रमाणित (Standard)"}
+                          {r.kind === "retry" ? "RETRY" : "STANDARD"}
                         </span>
                       </div>
 
-                      <div className="mt-2 flex justify-between items-baseline">
+                      <div className="mt-3 flex justify-between items-baseline">
                         <span
-                          className={`text-sm font-black ${
-                            isSelected ? "text-emerald-300" : "text-emerald-800"
+                          className={`font-display font-black text-2xl ${
+                            isSelected ? "text-chaos-orange" : "text-chaos-black"
                           }`}
                         >
                           {formatRupees(r.totalAmountPaise)}
                         </span>
                         <span
-                          className={`text-xs font-semibold ${
-                            isSelected ? "text-stone-300" : "text-stone-500"
+                          className={`font-mono text-xs ${
+                            isSelected ? "text-stone-300" : "text-chaos-muted"
                           }`}
                         >
-                          {r.totalFarmers} शेतकरी
+                          {r.totalFarmers} FARMERS
                         </span>
                       </div>
 
                       <div
-                        className={`text-[11px] mt-1 ${
-                          isSelected ? "text-stone-400" : "text-stone-500"
+                        className={`font-mono text-[10px] mt-1 uppercase ${
+                          isSelected ? "text-stone-400" : "text-chaos-muted"
                         }`}
                       >
-                        {new Date(r.createdAt).toLocaleString("mr-IN")}
+                        {new Date(r.createdAt).toLocaleString("en-IN")}
                       </div>
                     </div>
                   );
@@ -485,52 +488,54 @@ export function PaymentRuns() {
           </div>
 
           {/* Right: Selected Run Detail */}
-          <div className="md:col-span-2 flex flex-col gap-3">
+          <div className="lg:col-span-2 flex flex-col gap-4">
             {loadingDetail ? (
-              <div className="p-12 text-center text-sm font-bold text-stone-500 bg-white rounded-xl border border-stone-200">
-                ⏳ रन तपशील लोड होत आहे...
+              <div className="p-12 text-center font-mono text-xs uppercase tracking-wider text-chaos-muted bg-chaos-paper border-2 border-dashed border-chaos-black/40">
+                [ ⏳ रन तपशील लोड होत आहे... ]
               </div>
             ) : !runDetail ? (
-              <div className="p-12 text-center text-sm font-bold text-stone-500 bg-white rounded-xl border border-stone-200">
-                तपशील पाहण्यासाठी डावीकडील पेमेंट रन निवडा.
+              <div className="p-12 text-center font-mono text-xs uppercase tracking-wider text-chaos-muted bg-chaos-paper border-2 border-dashed border-chaos-black/40">
+                [ तपशील पाहण्यासाठी डावीकडील पेमेंट रन निवडा ]
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 {/* Run Metadata Header */}
-                <div className="bg-white p-4 rounded-xl border border-stone-300 shadow-sm flex flex-col gap-3">
-                  <div className="flex flex-wrap justify-between items-start gap-2">
+                <div className="bg-chaos-paper border-2 border-chaos-black p-5 shadow-tactile flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-mono font-black text-sm text-stone-900">
+                        <h3 className="font-mono font-black text-sm text-chaos-black">
                           {runDetail.run.id}
                         </h3>
                         {runDetail.run.parentRunId && (
-                          <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded">
-                            मूळ रन: {runDetail.run.parentRunId.slice(0, 10)}...
+                          <span className="font-mono text-[10px] bg-amber-100 text-amber-950 border border-chaos-orange px-2 py-0.5">
+                            PARENT: {runDetail.run.parentRunId.slice(0, 10)}...
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-stone-500 font-medium">
-                        तयार केले: {new Date(runDetail.run.createdAt).toLocaleString("mr-IN")} • {runDetail.run.createdByName}
+                      <span className="font-mono text-xs text-chaos-muted uppercase block mt-0.5">
+                        CREATED: {new Date(runDetail.run.createdAt).toLocaleString("en-IN")} • {runDetail.run.createdByName}
                       </span>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-xs font-bold text-stone-500 block">एकूण रक्कम:</span>
-                      <span className="text-xl font-black text-emerald-800">
+                    <div className="text-left sm:text-right">
+                      <span className="font-mono text-[11px] font-bold text-chaos-muted uppercase block">
+                        एकूण रक्कम (TOTAL RUN):
+                      </span>
+                      <span className="font-display font-black text-3xl text-chaos-black">
                         {formatRupees(runDetail.run.totalAmountPaise)}
                       </span>
                     </div>
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="pt-2 border-t border-stone-200 flex flex-wrap items-center justify-between gap-2">
+                  <div className="pt-3 border-t-2 border-chaos-black flex flex-wrap items-center justify-between gap-2.5">
                     <a
                       href={`/api/payment-runs/${runDetail.run.id}/file`}
                       download
-                      className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black px-4 py-2 rounded-lg flex items-center gap-1.5 shadow-sm"
+                      className="bg-chaos-black text-white hover:bg-stone-800 font-mono text-xs font-bold uppercase tracking-wider px-4 py-2.5 border-2 border-chaos-black shadow-tactile-sm flex items-center gap-1.5 transition-all active:translate-y-0.5"
                     >
-                      <span>📥 बँक CSV फाईल डाउनलोड करा</span>
+                      <span>📥 बँक CSV फाईल डाउनलोड // EXPORT CSV</span>
                     </a>
 
                     {/* Simulation Controls for Demo (§17 step 7) */}
@@ -538,88 +543,88 @@ export function PaymentRuns() {
                       <button
                         type="button"
                         onClick={() => handleSimulateStatus("all_success")}
-                        className="bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 text-xs font-bold px-2.5 py-1.5 rounded-lg"
+                        className="bg-chaos-canvas hover:bg-white text-chaos-black border-2 border-chaos-black font-mono text-xs font-bold uppercase px-3 py-1.5 shadow-tactile-sm active:translate-y-0.5"
                       >
-                        ✓ बँक यश नोंदवा
+                        ✓ SIMULATE ALL SUCCESS
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSimulateStatus("one_failed")}
-                        className="bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 text-xs font-bold px-2.5 py-1.5 rounded-lg"
+                        className="bg-red-50 hover:bg-red-100 text-red-900 border-2 border-red-600 font-mono text-xs font-bold uppercase px-3 py-1.5 shadow-tactile-sm active:translate-y-0.5"
                       >
-                        ⚠️ १ अयशस्वी सिम्युलेट करा
+                        ⚠️ 1 FAILED
                       </button>
                     </div>
                   </div>
 
                   {/* Retry Failed button if failures exist (§12) */}
                   {runDetail.items.some((i) => i.status === "failed") && (
-                    <div className="bg-red-50 border border-red-300 p-3 rounded-xl flex justify-between items-center">
-                      <div className="text-xs text-red-900 font-bold">
-                        <span>काही देयके अयशस्वी झाली आहेत. रीट्राय मॉडेलनुसार नवीन रन तयार करा.</span>
+                    <div className="bg-red-50 border-2 border-red-600 p-3.5 flex justify-between items-center shadow-tactile-sm">
+                      <div className="font-mono text-xs text-red-950 font-bold uppercase">
+                        <span>[!] काही देयके अयशस्वी झाली आहेत // FAILURES DETECTED</span>
                       </div>
                       <button
                         type="button"
                         onClick={handleRetryFailed}
-                        className="bg-red-700 hover:bg-red-800 text-white text-xs font-black px-4 py-2 rounded-lg shadow-sm"
+                        className="bg-red-700 hover:bg-red-800 text-white font-mono text-xs font-bold uppercase tracking-wider px-3.5 py-2 border-2 border-chaos-black shadow-tactile-sm active:translate-y-0.5"
                       >
-                        🔄 पुन्हा प्रयत्न करा (Retry Failed)
+                        🔄 रीट्राय रन तयार करा // RETRY FAILED
                       </button>
                     </div>
                   )}
                 </div>
 
                 {/* Items Table */}
-                <div className="bg-white border border-stone-300 rounded-xl overflow-hidden shadow-sm">
-                  <div className="p-3 bg-stone-50 border-b border-stone-200 text-xs font-bold text-stone-700 flex justify-between">
-                    <span>शेतकरी व बँक खाते (स्नॅपशॉटवरून)</span>
+                <div className="bg-chaos-paper border-2 border-chaos-black shadow-tactile overflow-hidden">
+                  <div className="p-3 bg-chaos-canvas border-b-2 border-chaos-black font-mono text-xs font-bold text-chaos-black uppercase tracking-wider flex justify-between">
+                    <span>शेतकरी व बँक खाते (SNAPSHOT LEDGER)</span>
                     <span>स्थिती व रक्कम</span>
                   </div>
 
-                  <div className="divide-y divide-stone-200">
+                  <div className="divide-y border-chaos-black/20">
                     {runDetail.items.map((item, idx) => (
-                      <div key={item.id} className="p-3 flex justify-between items-center text-xs">
+                      <div key={item.id} className="p-3.5 flex justify-between items-center text-xs hover:bg-white transition-colors">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-stone-500">{idx + 1}.</span>
-                            <span className="font-black text-stone-900 text-sm">
+                            <span className="font-mono font-bold text-chaos-muted">{idx + 1}.</span>
+                            <span className="font-sans font-black text-chaos-black text-sm">
                               {item.farmerName}
                             </span>
-                            <span className="font-mono text-stone-600 bg-stone-100 px-1.5 py-0.5 rounded text-[11px]">
+                            <span className="font-mono text-chaos-black bg-chaos-canvas border border-chaos-black/30 px-1.5 py-0.2 text-[11px]">
                               {item.accountMasked}
                             </span>
-                            <span className="text-stone-500 font-mono text-[11px]">
+                            <span className="text-chaos-muted font-mono text-[11px]">
                               {item.ifsc}
                             </span>
                           </div>
-                          <span className="text-[11px] text-stone-500 font-medium block mt-0.5">
+                          <span className="font-mono text-[11px] text-chaos-muted uppercase block mt-0.5">
                             पावत्या: {item.slipNumbers.join(", ")}
                           </span>
                           {item.failureReason && (
-                            <span className="text-[11px] text-red-700 font-bold block mt-0.5">
+                            <span className="font-mono text-[11px] text-red-600 font-bold uppercase block mt-0.5">
                               कारण: {item.failureReason}
                             </span>
                           )}
                           {item.retriedByItemId && (
-                            <span className="text-[11px] text-amber-800 font-bold block mt-0.5">
-                              रीट्राय आयटम आयडी: {item.retriedByItemId.slice(0, 8)}...
+                            <span className="font-mono text-[11px] text-chaos-orange font-bold uppercase block mt-0.5">
+                              रीट्राय आयटम: {item.retriedByItemId.slice(0, 10)}...
                             </span>
                           )}
                         </div>
 
                         <div className="text-right">
-                          <span className="font-black text-stone-900 text-sm block">
+                          <span className="font-display font-black text-chaos-black text-lg block">
                             {formatRupees(item.amountPaise)}
                           </span>
                           <span
-                            className={`inline-block mt-0.5 text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                            className={`inline-block mt-0.5 font-mono text-[10px] font-bold uppercase px-2 py-0.5 border ${
                               item.status === "success"
-                                ? "bg-emerald-100 text-emerald-900"
+                                ? "bg-emerald-100 text-emerald-950 border-emerald-600"
                                 : item.status === "failed"
-                                ? "bg-red-100 text-red-900"
+                                ? "bg-red-100 text-red-950 border-red-600"
                                 : item.status === "sent"
-                                ? "bg-blue-100 text-blue-900"
-                                : "bg-stone-100 text-stone-800"
+                                ? "bg-blue-100 text-blue-950 border-blue-600"
+                                : "bg-chaos-canvas text-chaos-black border-chaos-black"
                             }`}
                           >
                             {item.status}
@@ -637,4 +642,3 @@ export function PaymentRuns() {
     </div>
   );
 }
-
