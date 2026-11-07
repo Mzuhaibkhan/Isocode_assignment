@@ -5,6 +5,9 @@ import { PriceBoard } from "./routes/prices/PriceBoard.js";
 import { CollectFlow } from "./routes/collect/CollectFlow.js";
 import { SmsLogView } from "./routes/sms/SmsLogView.js";
 import { SyncPanel } from "./routes/sync/SyncPanel.js";
+import { ReviewQueue } from "./routes/review/ReviewQueue.js";
+import { PaymentRuns } from "./routes/payments/PaymentRuns.js";
+import { DeviceManagement } from "./routes/devices/DeviceManagement.js";
 import { Slip } from "./ui/Slip.js";
 import { Button } from "./ui/Button.js";
 import { syncMembersAndPrices } from "./offline/syncMembersAndPrices.js";
@@ -19,7 +22,9 @@ interface ActiveUser {
 
 export function App() {
   const [user, setUser] = useState<ActiveUser | null>(null);
-  const [activeTab, setActiveTab] = useState<"collect" | "members" | "prices" | "sync" | "sms" | "slips">("collect");
+  const [activeTab, setActiveTab] = useState<
+    "collect" | "members" | "prices" | "sync" | "review" | "payments" | "devices" | "sms" | "slips"
+  >("collect");
   const [sampleIndex, setSampleIndex] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
@@ -191,6 +196,36 @@ export function App() {
             )}
           </button>
           <button
+            onClick={() => setActiveTab("review")}
+            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === "review"
+                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
+                : "border-transparent text-stone-400 hover:text-white"
+            }`}
+          >
+            📋 पुनरावलोकन (Review)
+          </button>
+          <button
+            onClick={() => setActiveTab("payments")}
+            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === "payments"
+                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
+                : "border-transparent text-stone-400 hover:text-white"
+            }`}
+          >
+            💳 देयक फाईल (Payments)
+          </button>
+          <button
+            onClick={() => setActiveTab("devices")}
+            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === "devices"
+                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
+                : "border-transparent text-stone-400 hover:text-white"
+            }`}
+          >
+            📱 साधने (Devices)
+          </button>
+          <button
             onClick={() => setActiveTab("sms")}
             className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
               activeTab === "sms"
@@ -219,6 +254,9 @@ export function App() {
         {activeTab === "members" && <MemberList />}
         {activeTab === "prices" && <PriceBoard />}
         {activeTab === "sync" && <SyncPanel />}
+        {activeTab === "review" && <ReviewQueue />}
+        {activeTab === "payments" && <PaymentRuns />}
+        {activeTab === "devices" && <DeviceManagement />}
         {activeTab === "sms" && <SmsLogView />}
         {activeTab === "slips" && (
           <div className="flex flex-col gap-4">
