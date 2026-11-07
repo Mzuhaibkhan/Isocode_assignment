@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { db, CachedMember, CachedPrice } from "../../offline/db.js";
+import { enqueuePurchase } from "../../offline/queue.js";
+import { syncPurchases } from "../../offline/syncClient.js";
 import {
   netWeightX10,
   amountPaise,
@@ -116,53 +118,52 @@ export function CollectFlow() {
     else if (activeInput === "moisture") setMoistureInput("0");
   };
 
-  // Submit Purchase
+  // Submit Purchase (Offline-first signed hash chain §9.5)
   const handleSavePurchase = async () => {
     if (!selectedMember) return;
+    if (selectedMember.consentWithdrawn) {
+      setSaveError("या सभासदाने DPDP कायद्यांतर्गत संमती मागे घेतली आहे. खरेदी नोंदवता येणार नाही.");
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
 
-    const payload = {
-      memberId: selectedMember.id,
-      crop,
-      grade,
-      grossX10: grossTenths,
-      tareX10: tareTenths,
-      moistureX10: moistureTenths,
-      claimedNetX10: netTenths,
-      claimedAmountPaise: amountPaiseValue,
-      ratePaise,
-      priceVersion,
-      centreCode: "C07",
-    };
-
     try {
-      const res = await fetch("/purchases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || data.error || "खरेदी साठवताना त्रुटी आली");
-      }
-
-      setCreatedSlip({
-        slipNo: data.slip.slipNo,
+      // 1. Enqueue into signed, hash-chained local outbox
+      const { slip } = await enqueuePurchase({
+        memberId: selectedMember.id,
         farmerName: selectedMember.name,
-        crop: crop === "Soybean" ? "सोयाबीन" : "तूर",
-        netKg: data.slip.netKg,
-        moisturePercent: data.slip.moisturePercent,
-        ratePerQuintal: data.slip.ratePerQuintal,
-        amountPaise: data.slip.amountPaise,
-        smsStatus: data.slip.smsStatus || "sent",
+        crop,
+        grade,
+        grossX10: grossTenths,
+        tareX10: tareTenths,
+        moistureX10: moistureTenths,
+        ratePaise,
+        priceVersion,
+        centreCode: "C07",
       });
 
+      // 2. Render slip immediately
+      setCreatedSlip(slip);
       setStep(5);
+
+      // 3. If online, trigger background sync
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        syncPurchases()
+          .then((syncRes) => {
+            if (syncRes.syncedCount > 0) {
+              setCreatedSlip((prev) =>
+                prev ? { ...prev, smsStatus: "sent" } : null
+              );
+            }
+          })
+          .catch((err) => {
+            console.warn("Background sync error:", err);
+          });
+      }
     } catch (err: any) {
-      setSaveError(err.message);
+      setSaveError(err.message || "खरेदी साठवताना त्रुटी आली");
     } finally {
       setIsSaving(false);
     }
@@ -613,7 +614,13 @@ export function CollectFlow() {
             </div>
           </div>
 
-          {!selectedMember?.bankVerified && (
+          {selectedMember?.consentWithdrawn && (
+            <p className="text-xs font-bold text-red-900 bg-red-100 p-2.5 rounded-lg mt-2 border border-red-300">
+              ⚠️ संमती मागे घेतली: या सभासदाने DPDP कायद्यांतर्गत संमती मागे घेतली आहे. खरेदी नोंदवता येणार नाही.
+            </p>
+          )}
+
+          {!selectedMember?.consentWithdrawn && !selectedMember?.bankVerified && (
             <p className="text-[11px] font-bold text-amber-800 bg-amber-50 p-1.5 rounded mt-2 border border-amber-200">
               ⚠️ बँक खाते अद्याप पडताळलेले नाही. पेमेंटपूर्वी पडताळणी होईल.
             </p>
@@ -669,9 +676,9 @@ export function CollectFlow() {
         {/* Save Purchase Button */}
         <Button
           variant="primary"
-          disabled={isSaving || netTenths <= 0}
+          disabled={isSaving || netTenths <= 0 || !!selectedMember?.consentWithdrawn}
           onClick={handleSavePurchase}
-          className="w-full text-lg py-4 font-black shadow-lg min-h-touch bg-brand"
+          className="w-full text-lg py-4 font-black shadow-lg min-h-touch bg-brand disabled:opacity-50"
         >
           {isSaving ? "खरेदी साठवत आहे..." : "✓ खरेदी साठवा (Save Purchase)"}
         </Button>

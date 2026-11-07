@@ -4,9 +4,13 @@ import { MemberList } from "./routes/members/MemberList.js";
 import { PriceBoard } from "./routes/prices/PriceBoard.js";
 import { CollectFlow } from "./routes/collect/CollectFlow.js";
 import { SmsLogView } from "./routes/sms/SmsLogView.js";
+import { SyncPanel } from "./routes/sync/SyncPanel.js";
 import { Slip } from "./ui/Slip.js";
 import { Button } from "./ui/Button.js";
 import { syncMembersAndPrices } from "./offline/syncMembersAndPrices.js";
+import { registerDeviceWithServer } from "./offline/signer.js";
+import { startSyncLoop } from "./offline/syncClient.js";
+import { db } from "./offline/db.js";
 
 interface ActiveUser {
   role: string;
@@ -15,19 +19,39 @@ interface ActiveUser {
 
 export function App() {
   const [user, setUser] = useState<ActiveUser | null>(null);
-  const [activeTab, setActiveTab] = useState<"collect" | "members" | "prices" | "sms" | "slips">("collect");
+  const [activeTab, setActiveTab] = useState<"collect" | "members" | "prices" | "sync" | "sms" | "slips">("collect");
   const [sampleIndex, setSampleIndex] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
 
   useEffect(() => {
-    // Background sync of members and prices on mount
+    // Initial device registration and background cache download (§9.1)
+    registerDeviceWithServer();
     syncMembersAndPrices();
+
+    // Start background sync loop (§9.6)
+    const cleanupSync = startSyncLoop((stats) => {
+      setPendingSyncCount(stats.totalPending);
+    });
+
+    const updatePendingCount = async () => {
+      try {
+        const count = await db.outbox.where("status").equals("pending").count();
+        setPendingSyncCount(count);
+      } catch {}
+    };
+
+    updatePendingCount();
+    const interval = setInterval(updatePendingCount, 4000);
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+
     return () => {
+      cleanupSync();
+      clearInterval(interval);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
@@ -152,6 +176,21 @@ export function App() {
             💰 दर फलक (Price Board)
           </button>
           <button
+            onClick={() => setActiveTab("sync")}
+            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === "sync"
+                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
+                : "border-transparent text-stone-400 hover:text-white"
+            }`}
+          >
+            <span>🔄 सिंक स्थिती (Sync)</span>
+            {pendingSyncCount > 0 && (
+              <span className="bg-amber-400 text-stone-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                {pendingSyncCount}
+              </span>
+            )}
+          </button>
+          <button
             onClick={() => setActiveTab("sms")}
             className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
               activeTab === "sms"
@@ -179,6 +218,7 @@ export function App() {
         {activeTab === "collect" && <CollectFlow />}
         {activeTab === "members" && <MemberList />}
         {activeTab === "prices" && <PriceBoard />}
+        {activeTab === "sync" && <SyncPanel />}
         {activeTab === "sms" && <SmsLogView />}
         {activeTab === "slips" && (
           <div className="flex flex-col gap-4">
