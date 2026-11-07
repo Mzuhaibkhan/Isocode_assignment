@@ -88,25 +88,33 @@ export const PriceBoard: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-5 max-w-2xl mx-auto p-2">
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto p-1 font-sans">
       {/* Active Price Cards Hero */}
-      <div className="bg-white p-5 rounded-2xl border-2 border-stone-800 shadow-sm">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-chaos-paper border-2 border-chaos-black p-6 shadow-tactile">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6 border-b-2 border-chaos-black pb-4">
           <div>
-            <h2 className="text-xl font-black text-text-main">
-              आजचा अधिकृत दर फलक (Active Price Board)
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-mono text-xs uppercase font-bold text-chaos-orange tracking-widest">
+                OFFICIAL COMMODITY BOARD // दर फलक
+              </span>
+              <span className="font-mono text-[10px] bg-chaos-black text-white px-2 py-0.5 uppercase tracking-wider">
+                DISTRICT WIDE
+              </span>
+            </div>
+            <h2 className="font-display font-black text-3xl sm:text-4xl uppercase tracking-tight text-chaos-black">
+              आजचा अधिकृत दर फलक (ACTIVE PRICE BOARD)
             </h2>
-            <p className="text-xs font-bold text-text-muted">
-              सर्व २२ खरेदी केंद्रांसाठी एकच केंद्रीय दर
+            <p className="font-mono text-xs uppercase tracking-wider text-chaos-muted mt-0.5">
+              UNIFIED RATES ACROSS ALL 22 PROCUREMENT SHEDS • LATUR HQ
             </p>
           </div>
-          <span className="text-xs bg-emerald-100 text-brand border border-brand/40 px-3 py-1 rounded-full font-black">
-            थेट लागू (Active)
+          <span className="font-mono text-xs bg-chaos-orange text-chaos-black border-2 border-chaos-black px-3 py-1 font-black uppercase tracking-wider shadow-tactile-sm">
+            ACTIVE // थेट लागू
           </span>
         </div>
 
         {statusMsg && (
-          <div className="bg-emerald-50 border-2 border-brand text-brand font-bold text-sm p-3 rounded-xl mb-4">
+          <div className="bg-emerald-50 border-2 border-emerald-600 text-emerald-900 font-mono text-xs font-bold p-3 shadow-tactile-sm mb-4 uppercase tracking-wide">
             {statusMsg}
           </div>
         )}
@@ -115,24 +123,27 @@ export const PriceBoard: React.FC = () => {
           {currentPrices.map((p) => (
             <div
               key={p.id}
-              className="bg-emerald-50/50 border-2 border-brand p-4 rounded-xl flex flex-col justify-between"
+              className="bg-white border-2 border-chaos-black p-5 shadow-tactile-sm flex flex-col justify-between"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-2xl font-black text-stone-900">
-                    {p.crop === "Soybean" ? "सोयाबीन (Soybean)" : "तूर (Tur)"}
+                  <h3 className="font-display font-black text-3xl uppercase tracking-tight text-chaos-black">
+                    {p.crop === "Soybean" ? "सोयाबीन (SOYBEAN)" : "तूर (TUR)"}
                   </h3>
-                  <span className="text-xs font-bold text-text-muted">
-                    प्रतवारी (Grade): {p.grade}
+                  <span className="font-mono text-xs text-chaos-muted uppercase tracking-wider block mt-0.5">
+                    GRADE: {p.grade} (मानक प्रत)
                   </span>
                 </div>
-                <span className="text-xs font-extrabold bg-stone-900 text-amber-300 px-2 py-0.5 rounded">
+                <span className="font-mono text-xs font-black bg-chaos-black text-chaos-orange px-2 py-0.5">
                   v{p.version}
                 </span>
               </div>
-              <div className="mt-4 pt-2 border-t border-emerald-200 flex items-baseline justify-between">
-                <span className="text-xs font-bold text-text-muted">प्रति क्विंटल दर:</span>
-                <span className="text-3xl font-black text-stone-950">
+
+              <div className="mt-6 pt-4 border-t-2 border-chaos-black flex items-baseline justify-between">
+                <span className="font-mono text-xs uppercase font-bold text-chaos-muted">
+                  प्रति क्विंटल दर (PER QTL):
+                </span>
+                <span className="font-display font-black text-4xl sm:text-5xl text-chaos-black tracking-tight">
                   {p.rateFormatted}
                 </span>
               </div>
@@ -142,35 +153,41 @@ export const PriceBoard: React.FC = () => {
       </div>
 
       {/* Publish New Price Form (Office Manager Only) */}
-      <div className="bg-white p-5 rounded-2xl border-2 border-stone-800 shadow-sm">
-        <h3 className="text-lg font-black text-text-main mb-3">
-          नवीन दर जाहीर करा (Publish Daily Rate)
-        </h3>
-        <form onSubmit={handlePublishPrice} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="crop-select" className="text-xs font-bold text-text-main">
-              पीक निवडा:
+      <div className="bg-chaos-paper border-2 border-chaos-black p-6 shadow-tactile">
+        <div className="border-b-2 border-chaos-black pb-3 mb-4">
+          <span className="font-mono text-xs uppercase font-bold text-chaos-orange tracking-widest block">
+            ADMINISTRATIVE DISPATCH // नवीन दर
+          </span>
+          <h3 className="font-display font-black text-2xl uppercase tracking-tight text-chaos-black">
+            नवीन दर जाहीर करा (PUBLISH DAILY RATE)
+          </h3>
+        </div>
+
+        <form onSubmit={handlePublishPrice} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="crop-select" className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-black">
+              पीक निवडा (COMMODITY):
             </label>
             <select
               id="crop-select"
               value={crop}
               onChange={(e) => setCrop(e.target.value)}
-              className="min-h-touch px-3 py-2 rounded-lg border-2 border-stone-700 font-bold text-base bg-white"
+              className="min-h-[48px] px-3.5 py-2.5 rounded-none border-2 border-chaos-black font-mono font-bold text-sm bg-chaos-canvas text-chaos-black focus:bg-white focus:outline-none focus:shadow-tactile-orange"
             >
-              <option value="Soybean">सोयाबीन (Soybean)</option>
-              <option value="Tur">तूर (Tur)</option>
+              <option value="Soybean">सोयाबीन (SOYBEAN)</option>
+              <option value="Tur">तूर (TUR)</option>
             </select>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="grade-select" className="text-xs font-bold text-text-main">
-              प्रतवारी (Grade):
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="grade-select" className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-black">
+              प्रतवारी (GRADE):
             </label>
             <select
               id="grade-select"
               value={grade}
               onChange={(e) => setGrade(e.target.value)}
-              className="min-h-touch px-3 py-2 rounded-lg border-2 border-stone-700 font-bold text-base bg-white"
+              className="min-h-[48px] px-3.5 py-2.5 rounded-none border-2 border-chaos-black font-mono font-bold text-sm bg-chaos-canvas text-chaos-black focus:bg-white focus:outline-none focus:shadow-tactile-orange"
             >
               <option value="FAQ">FAQ (मानक प्रत)</option>
             </select>
@@ -185,33 +202,45 @@ export const PriceBoard: React.FC = () => {
           />
 
           <div className="sm:col-span-3 flex justify-end mt-2">
-            <Button type="submit" disabled={loading} size="default">
-              {loading ? "प्रकाशित होत आहे..." : "दर जाहीर करा (Publish)"}
+            <Button
+              type="submit"
+              variant="orange"
+              disabled={loading}
+              size="default"
+              className="shadow-tactile-sm"
+            >
+              {loading ? "प्रकाशित होत आहे..." : "दर जाहीर करा // PUBLISH RATE"}
             </Button>
           </div>
         </form>
       </div>
 
       {/* Price Change Audit History */}
-      <div className="bg-white p-5 rounded-2xl border-2 border-stone-800 shadow-sm">
-        <h3 className="text-base font-black text-text-main mb-3">
-          दर बदल इतिहास (Price Audit History)
-        </h3>
+      <div className="bg-chaos-paper border-2 border-chaos-black p-6 shadow-tactile">
+        <div className="border-b-2 border-chaos-black pb-3 mb-4 flex justify-between items-center">
+          <h3 className="font-display font-black text-xl uppercase tracking-tight text-chaos-black">
+            दर बदल इतिहास (PRICE AUDIT LOG)
+          </h3>
+          <span className="font-mono text-xs text-chaos-muted uppercase">
+            IMMUTABLE LEDGER
+          </span>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left font-mono text-xs">
             <thead>
-              <tr className="border-b-2 border-stone-800 text-text-muted">
-                <th className="py-2 px-2">तारीख व वेळ</th>
-                <th className="py-2 px-2">पीक</th>
-                <th className="py-2 px-2">प्रत</th>
-                <th className="py-2 px-2">आवृत्ती (v)</th>
-                <th className="py-2 px-2 text-right">जाहीर दर</th>
+              <tr className="border-b-2 border-chaos-black text-chaos-muted uppercase">
+                <th className="py-2.5 px-2">तारीख व वेळ (TIMESTAMP)</th>
+                <th className="py-2.5 px-2">पीक (CROP)</th>
+                <th className="py-2.5 px-2">प्रत (GRADE)</th>
+                <th className="py-2.5 px-2">आवृत्ती (VER)</th>
+                <th className="py-2.5 px-2 text-right">जाहीर दर (RATE)</th>
               </tr>
             </thead>
             <tbody>
               {history.map((h) => (
-                <tr key={h.id} className="border-b border-stone-200">
-                  <td className="py-2.5 px-2 font-medium text-stone-700">
+                <tr key={h.id} className="border-b border-stone-300 hover:bg-chaos-canvas transition-colors">
+                  <td className="py-3 px-2 text-chaos-black font-medium">
                     {new Date(h.effectiveFrom).toLocaleDateString("en-IN", {
                       day: "2-digit",
                       month: "short",
@@ -220,14 +249,14 @@ export const PriceBoard: React.FC = () => {
                       minute: "2-digit",
                     })}
                   </td>
-                  <td className="py-2.5 px-2 font-bold text-stone-900">{h.crop}</td>
-                  <td className="py-2.5 px-2 font-medium">{h.grade}</td>
-                  <td className="py-2.5 px-2">
-                    <span className="bg-stone-100 font-bold px-1.5 py-0.5 rounded border border-stone-300">
+                  <td className="py-3 px-2 font-bold text-chaos-black uppercase">{h.crop}</td>
+                  <td className="py-3 px-2 text-chaos-muted">{h.grade}</td>
+                  <td className="py-3 px-2">
+                    <span className="bg-chaos-canvas border border-chaos-black px-1.5 py-0.5 font-bold text-chaos-black">
                       v{h.version}
                     </span>
                   </td>
-                  <td className="py-2.5 px-2 text-right font-black text-brand text-sm">
+                  <td className="py-3 px-2 text-right font-display font-black text-lg text-chaos-black">
                     {h.rateFormatted}
                   </td>
                 </tr>
@@ -239,4 +268,3 @@ export const PriceBoard: React.FC = () => {
     </div>
   );
 };
-
