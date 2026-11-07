@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { db, CachedMember, CachedPrice } from "../../offline/db.js";
 import { enqueuePurchase } from "../../offline/queue.js";
 import { syncPurchases } from "../../offline/syncClient.js";
@@ -197,7 +197,6 @@ export function CollectFlow() {
           const reading = await requestPhotoReading(base64, "meter");
           setAiReading(reading);
           if (reading.value !== null && Number.isFinite(reading.value)) {
-            // Pre-fill if moisture was untouched or default
             setMoistureInput(reading.value.toFixed(1));
           }
         } catch (serverErr: any) {
@@ -214,7 +213,6 @@ export function CollectFlow() {
           });
         }
       } else {
-        // Offline mode: allow manual numpad with photo queued
         setPhotoNotice("ऑफलाइन मोड: फोटो साठवला आहे, नेटवर्क आल्यावर सर्व्हरवर पाठवला जाईल.");
         setMismatchConfirmed(true);
         await queuePhotoOffline({
@@ -257,7 +255,7 @@ export function CollectFlow() {
   // -------------------------------------------------------------------------
   if (step === 5 && createdSlip) {
     return (
-      <div className="min-h-screen bg-bg-main py-6 px-3 flex flex-col justify-center items-center">
+      <div className="py-4 px-2 flex flex-col justify-center items-center">
         <Slip
           slipNo={createdSlip.slipNo}
           farmerName={createdSlip.farmerName}
@@ -283,38 +281,43 @@ export function CollectFlow() {
         stepTotal={4}
         title="सभासद निवडा"
         isOnline={isOnline}
-        priceDate={`दर आवृत्ती: v${priceVersion}`}
+        priceDate={`RATE VERSION: v${priceVersion}`}
       >
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {/* Search Bar */}
           <div className="relative">
             <input
               type="text"
-              placeholder="नाव, आडनाव, गाव किंवा कोडने शोधा..."
+              placeholder="नाव, आडनाव, गाव किंवा कोडने शोधा... (SEARCH MEMBER)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full min-h-touch px-4 py-3 text-base border-2 border-stone-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand"
+              className="w-full min-h-[50px] px-4 py-3 text-base font-sans font-medium border-2 border-chaos-black bg-chaos-paper focus:bg-white focus:outline-none focus:shadow-tactile-orange transition-all placeholder:text-chaos-muted"
               autoFocus
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-3 text-stone-500 font-bold px-2 py-1"
+                className="absolute right-3 top-3 font-mono text-sm font-bold text-chaos-muted hover:text-chaos-black px-2 py-1"
               >
-                ✕
+                ✕ CLEAR
               </button>
             )}
           </div>
 
-          <p className="text-xs font-bold text-text-muted">
-            सभासद यादी (नाव टॅप करा):
-          </p>
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs uppercase tracking-wider text-chaos-muted font-bold">
+              सभासद यादी // DIRECTORY TAP TO SELECT:
+            </span>
+            <span className="font-mono text-[11px] text-chaos-muted">
+              {searchResults.length} RECORDS FOUND
+            </span>
+          </div>
 
           {/* Members List */}
-          <div className="flex flex-col gap-2 max-h-[55vh] overflow-y-auto pr-1">
+          <div className="flex flex-col gap-2.5 max-h-[55vh] overflow-y-auto pr-1">
             {searchResults.length === 0 ? (
-              <div className="text-center py-8 text-stone-500 bg-white rounded-xl border border-dashed border-stone-300">
-                कोणताही सभासद सापडला नाही
+              <div className="text-center py-12 text-chaos-muted bg-chaos-paper border-2 border-dashed border-chaos-black/40 font-mono text-xs uppercase tracking-wider">
+                [ कोणतीही नोंद सापडली नाही // NO MEMBER FOUND ]
               </div>
             ) : (
               searchResults.map((m) => {
@@ -331,25 +334,25 @@ export function CollectFlow() {
                         setStep(2);
                       }
                     }}
-                    className={`w-full min-h-touch text-left p-3.5 rounded-xl border-2 transition-all flex justify-between items-center ${
+                    className={`w-full min-h-[54px] text-left p-3.5 border-2 transition-all flex justify-between items-center group ${
                       isBlocked
-                        ? "bg-red-50 border-red-300 opacity-70 cursor-not-allowed"
-                        : "bg-white border-stone-800 hover:border-brand active:bg-stone-50 shadow-sm"
+                        ? "bg-red-50/70 border-red-300 opacity-70 cursor-not-allowed"
+                        : "bg-chaos-paper border-chaos-black hover:bg-white hover:shadow-tactile hover:translate-y-[-1px] active:translate-y-0.5"
                     }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-base font-black text-stone-900">
+                        <span className="font-sans font-black text-lg text-chaos-black">
                           {m.name}
                         </span>
                         {m.nameLatin && (
-                          <span className="text-xs text-stone-500 font-semibold">
+                          <span className="font-mono text-xs text-chaos-muted uppercase">
                             ({m.nameLatin})
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-stone-600 font-semibold flex items-center gap-2 mt-0.5">
-                        <span className="font-mono bg-stone-100 px-1.5 py-0.5 rounded">
+                      <div className="font-mono text-xs text-chaos-muted flex items-center gap-2 mt-0.5">
+                        <span className="bg-chaos-canvas border border-chaos-black/30 px-1.5 py-0.2 text-chaos-black font-bold">
                           {m.farmerCode}
                         </span>
                         <span>• गाव: {m.village}</span>
@@ -358,20 +361,20 @@ export function CollectFlow() {
 
                     <div className="text-right flex flex-col items-end gap-1">
                       {isBlocked ? (
-                        <span className="text-[10px] bg-red-600 text-white font-black px-2 py-0.5 rounded">
+                        <span className="font-mono text-[10px] bg-red-600 text-white font-black px-2 py-0.5 uppercase tracking-wide">
                           संमती मागे घेतली
                         </span>
                       ) : m.bankVerified ? (
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded border border-emerald-300">
+                        <span className="font-mono text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-500 font-bold px-2 py-0.5 uppercase">
                           बँक खात्रीशीर ✓
                         </span>
                       ) : (
-                        <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded border border-amber-300">
+                        <span className="font-mono text-[10px] bg-amber-100 text-amber-900 border border-amber-500 font-bold px-2 py-0.5 uppercase">
                           बँक अप्रमाणित
                         </span>
                       )}
-                      <span className="text-xs font-bold text-stone-400">
-                        निवडा →
+                      <span className="font-mono text-xs font-bold text-chaos-black group-hover:text-chaos-orange transition-colors">
+                        SELECT →
                       </span>
                     </div>
                   </button>
@@ -398,52 +401,54 @@ export function CollectFlow() {
       >
         <div className="flex flex-col gap-4">
           {/* Member Banner */}
-          <div className="bg-stone-100 p-2.5 rounded-xl border border-stone-300 flex justify-between items-center text-xs">
+          <div className="bg-chaos-paper border-2 border-chaos-black p-3 flex justify-between items-center text-xs">
             <div>
-              <span className="text-text-muted font-bold">सभासद: </span>
-              <span className="font-black text-stone-900 text-sm">
+              <span className="font-mono text-chaos-muted uppercase tracking-wider block">
+                निवडलेला शेतकरी (FARMER):
+              </span>
+              <span className="font-sans font-black text-base text-chaos-black">
                 {selectedMember?.name}
               </span>
             </div>
-            <span className="font-mono bg-white px-2 py-0.5 rounded border border-stone-200">
+            <span className="font-mono font-bold text-xs bg-chaos-black text-white px-2 py-1">
               {selectedMember?.farmerCode}
             </span>
           </div>
 
           {/* Crop Selector */}
           <div>
-            <label className="text-xs font-black uppercase tracking-wider text-text-muted block mb-1.5">
-              पीक निवडा:
+            <label className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-muted block mb-1.5">
+              पीक निवडा // SELECT COMMODITY:
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => setCrop("Soybean")}
-                className={`min-h-touch p-3 rounded-xl border-2 font-black text-sm flex flex-col items-center justify-center transition-all ${
+                className={`min-h-[56px] p-3 border-2 font-mono text-left transition-all ${
                   crop === "Soybean"
-                    ? "bg-stone-900 text-white border-stone-900 shadow-md"
-                    : "bg-white text-stone-800 border-stone-300 hover:border-stone-400"
+                    ? "bg-chaos-black text-white border-chaos-black shadow-tactile-orange translate-y-[-1px]"
+                    : "bg-chaos-paper text-chaos-black border-chaos-black hover:bg-white"
                 }`}
               >
-                <span>सोयाबीन (Soybean)</span>
-                <span className="text-xs font-bold text-emerald-400">
+                <div className="font-sans font-black text-base uppercase">सोयाबीन (Soybean)</div>
+                <div className={`font-mono text-xs mt-0.5 ${crop === "Soybean" ? "text-chaos-orange font-bold" : "text-chaos-muted"}`}>
                   ₹{crop === "Soybean" ? rateRupees : 4850} / क्विंटल
-                </span>
+                </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => setCrop("Tur")}
-                className={`min-h-touch p-3 rounded-xl border-2 font-black text-sm flex flex-col items-center justify-center transition-all ${
+                className={`min-h-[56px] p-3 border-2 font-mono text-left transition-all ${
                   crop === "Tur"
-                    ? "bg-stone-900 text-white border-stone-900 shadow-md"
-                    : "bg-white text-stone-800 border-stone-300 hover:border-stone-400"
+                    ? "bg-chaos-black text-white border-chaos-black shadow-tactile-orange translate-y-[-1px]"
+                    : "bg-chaos-paper text-chaos-black border-chaos-black hover:bg-white"
                 }`}
               >
-                <span>तूर (Tur)</span>
-                <span className="text-xs font-bold text-emerald-400">
+                <div className="font-sans font-black text-base uppercase">तूर (Tur)</div>
+                <div className={`font-mono text-xs mt-0.5 ${crop === "Tur" ? "text-chaos-orange font-bold" : "text-chaos-muted"}`}>
                   ₹{crop === "Tur" ? rateRupees : 7200} / क्विंटल
-                </span>
+                </div>
               </button>
             </div>
           </div>
@@ -452,60 +457,62 @@ export function CollectFlow() {
           <div className="grid grid-cols-2 gap-3">
             <div
               onClick={() => setActiveInput("gross")}
-              className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+              className={`p-3.5 border-2 cursor-pointer transition-all ${
                 activeInput === "gross"
-                  ? "bg-amber-50/50 border-amber-600 ring-2 ring-amber-400"
-                  : "bg-white border-stone-300"
+                  ? "bg-white border-chaos-black shadow-tactile-orange ring-1 ring-chaos-orange"
+                  : "bg-chaos-paper border-chaos-black/40 hover:border-chaos-black"
               }`}
             >
-              <label className="text-xs font-black text-stone-600 block">
-                एकूण वजन (Gross kg)
+              <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-chaos-muted block">
+                एकूण वजन (GROSS KG)
               </label>
-              <span className="text-2xl font-black text-stone-950 block mt-1">
+              <span className="font-display font-black text-4xl sm:text-5xl text-chaos-black block mt-1 tracking-tight leading-none">
                 {grossInput || "0.0"}
               </span>
             </div>
 
             <div
               onClick={() => setActiveInput("tare")}
-              className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+              className={`p-3.5 border-2 cursor-pointer transition-all ${
                 activeInput === "tare"
-                  ? "bg-amber-50/50 border-amber-600 ring-2 ring-amber-400"
-                  : "bg-white border-stone-300"
+                  ? "bg-white border-chaos-black shadow-tactile-orange ring-1 ring-chaos-orange"
+                  : "bg-chaos-paper border-chaos-black/40 hover:border-chaos-black"
               }`}
             >
-              <label className="text-xs font-black text-stone-600 block">
-                काटा वजन (Tare kg)
+              <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-chaos-muted block">
+                काटा वजन (TARE KG)
               </label>
-              <span className="text-2xl font-black text-stone-950 block mt-1">
+              <span className="font-display font-black text-4xl sm:text-5xl text-chaos-black block mt-1 tracking-tight leading-none">
                 {tareInput || "0.0"}
               </span>
             </div>
           </div>
 
           {/* Computed Net Weight Before Deduction */}
-          <div className="bg-stone-50 border border-stone-300 p-2.5 rounded-xl flex justify-between items-center text-xs">
-            <span className="font-bold text-stone-600">कपातीपूर्वी वजन (Gross - Tare):</span>
-            <span className="text-base font-black text-stone-900">
-              {(beforeDeductionTenths / 10).toFixed(1)} किग्रॅ
+          <div className="bg-chaos-canvas border-2 border-chaos-black p-3 flex justify-between items-center text-xs">
+            <span className="font-mono uppercase font-bold text-chaos-muted">
+              कपातीपूर्वी निव्वळ वजन (GROSS - TARE):
+            </span>
+            <span className="font-mono text-base font-black text-chaos-black">
+              {(beforeDeductionTenths / 10).toFixed(1)} KG
             </span>
           </div>
 
           {/* Scale Photo Placeholder (§13.2) */}
-          <div className="flex justify-between items-center bg-stone-100 p-2.5 rounded-xl border border-stone-200">
-            <span className="text-xs font-bold text-stone-700">
-              📷 काटा फोटो (Scale Photo):
+          <div className="flex justify-between items-center bg-chaos-paper p-3 border-2 border-chaos-black">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-black">
+              [ 📷 काटा फोटो (SCALE PHOTO) ]
             </span>
             <button
               type="button"
               onClick={() => setScalePhotoAttached(!scalePhotoAttached)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-bold border ${
+              className={`font-mono text-xs px-3 py-1.5 border-2 font-bold uppercase tracking-wider transition-all ${
                 scalePhotoAttached
-                  ? "bg-emerald-600 text-white border-emerald-700"
-                  : "bg-white text-stone-800 border-stone-300"
+                  ? "bg-chaos-black text-chaos-orange border-chaos-black"
+                  : "bg-chaos-canvas text-chaos-black border-chaos-black hover:bg-white"
               }`}
             >
-              {scalePhotoAttached ? "फोटो जोडला ✓" : "कॅमेरा उघडा"}
+              {scalePhotoAttached ? "PHOTO ATTACHED ✓" : "CAPTURE PHOTO"}
             </button>
           </div>
 
@@ -517,22 +524,22 @@ export function CollectFlow() {
           />
 
           {mathError && (
-            <p className="text-xs font-black text-red-600 text-center">
-              ⚠️ {mathError}
-            </p>
+            <div className="border-2 border-red-600 bg-red-50 p-2 text-center font-mono text-xs font-bold text-red-700 uppercase tracking-wide">
+              [!] {mathError}
+            </div>
           )}
 
           {/* Next Button */}
           <Button
-            variant="primary"
+            variant="orange"
             disabled={grossTenths <= 0 || tareTenths >= grossTenths}
             onClick={() => {
               setActiveInput("moisture");
               setStep(3);
             }}
-            className="w-full text-base py-3.5"
+            className="w-full text-base py-3.5 shadow-tactile"
           >
-            पुढे जा (Next: Moisture) →
+            पुढे जा // NEXT: MOISTURE →
           </Button>
         </div>
       </StepShell>
@@ -546,7 +553,6 @@ export function CollectFlow() {
     const moisturePermilleVal = moisturePermille(moistureTenths);
     const deductionPct = (moisturePermilleVal / 10).toFixed(1);
 
-    // Mismatch detection: if AI returned a reading and operator's typed tenths differs
     const hasMismatch =
       aiReading?.valueX10 !== null &&
       aiReading?.valueX10 !== undefined &&
@@ -567,15 +573,15 @@ export function CollectFlow() {
       >
         <div className="flex flex-col gap-4">
           {/* Member & Weight context */}
-          <div className="bg-stone-100 p-2.5 rounded-xl border border-stone-300 flex justify-between items-center text-xs">
+          <div className="bg-chaos-paper border-2 border-chaos-black p-3 flex justify-between items-center text-xs">
             <div>
-              <span className="text-text-muted font-bold">शेतकरी: </span>
-              <span className="font-black text-stone-900">{selectedMember?.name}</span>
+              <span className="font-mono text-chaos-muted uppercase tracking-wider">शेतकरी: </span>
+              <span className="font-sans font-black text-chaos-black">{selectedMember?.name}</span>
             </div>
             <div>
-              <span className="text-text-muted font-bold">वजन: </span>
-              <span className="font-black text-stone-900">
-                {(beforeDeductionTenths / 10).toFixed(1)} किग्रॅ
+              <span className="font-mono text-chaos-muted uppercase tracking-wider">वजन: </span>
+              <span className="font-mono font-black text-chaos-black">
+                {(beforeDeductionTenths / 10).toFixed(1)} KG
               </span>
             </div>
           </div>
@@ -583,52 +589,52 @@ export function CollectFlow() {
           {/* Moisture Input Display */}
           <div
             onClick={() => setActiveInput("moisture")}
-            className="p-4 rounded-xl border-2 border-amber-600 bg-amber-50/40 text-center"
+            className="p-5 border-2 border-chaos-black bg-chaos-paper text-center shadow-tactile cursor-pointer"
           >
-            <label className="text-xs font-black uppercase tracking-wider text-stone-700 block mb-1">
-              ओलावा प्रमाण (Moisture %)
+            <label className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-muted block mb-1">
+              ओलावा प्रमाण // MOISTURE PERCENTAGE
             </label>
-            <span className="text-5xl font-black text-stone-950 block my-1">
-              {moistureInput || "0.0"} %
+            <span className="font-display font-black text-6xl text-chaos-black block my-1 tracking-tight leading-none">
+              {moistureInput || "0.0"} <span className="text-3xl text-chaos-orange">%</span>
             </span>
-            <span className="text-xs font-bold text-stone-500 block">
-              मानक मर्यादा: १२.०% (Base: 12.0%)
+            <span className="font-mono text-xs font-bold text-chaos-muted block mt-1">
+              मानक मर्यादा (STANDARD BASE): 12.0%
             </span>
           </div>
 
           {/* Deduction Feedback Box */}
           <div
-            className={`p-3 rounded-xl border-2 text-xs font-bold flex justify-between items-center ${
+            className={`p-3.5 border-2 font-mono text-xs font-bold flex justify-between items-center ${
               moistureTenths <= 120
-                ? "bg-emerald-50 border-emerald-300 text-emerald-900"
-                : "bg-amber-50 border-amber-300 text-amber-900"
+                ? "bg-emerald-50 border-emerald-600 text-emerald-900"
+                : "bg-amber-50 border-chaos-orange text-amber-950"
             }`}
           >
             <div>
-              <span>ओलावा कपात: </span>
+              <span className="uppercase text-chaos-muted">ओलावा कपात: </span>
               <span className="font-black">
-                {moistureTenths <= 120 ? "०% (कपात नाही)" : `${deductionPct}% कपात`}
+                {moistureTenths <= 120 ? "०% (कपात नाही / ZERO DEDUCTION)" : `${deductionPct}% कपात`}
               </span>
             </div>
             <div>
-              <span>वजन कपात: </span>
-              <span className="font-black">
-                {(deductionTenths / 10).toFixed(1)} किग्रॅ
+              <span className="uppercase text-chaos-muted">वजन कपात: </span>
+              <span className="font-black font-mono">
+                {(deductionTenths / 10).toFixed(1)} KG
               </span>
             </div>
           </div>
 
           {/* Moisture Meter Photo Capture & AI Reading (§10.2) */}
-          <div className="bg-stone-100 p-3 rounded-xl border border-stone-300 flex flex-col gap-2">
+          <div className="bg-chaos-paper border-2 border-chaos-black p-3.5 flex flex-col gap-3">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-stone-800">
-                📷 ओलावा मीटर डिस्प्ले फोटो (LCD Photo):
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-black">
+                📷 मीटर डिस्प्ले फोटो (LCD PHOTO):
               </span>
               <label
                 htmlFor="meter-photo-input"
-                className="cursor-pointer bg-white border border-stone-400 text-stone-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-stone-50"
+                className="cursor-pointer bg-chaos-canvas border-2 border-chaos-black text-chaos-black font-mono text-xs font-bold uppercase tracking-wider px-3 py-1.5 shadow-tactile-sm hover:bg-chaos-black hover:text-white transition-all"
               >
-                {meterPhotoData ? "फोटो बदला" : "कॅमेरा उघडा"}
+                {meterPhotoData ? "CHANGE PHOTO" : "CAPTURE PHOTO"}
               </label>
               <input
                 id="meter-photo-input"
@@ -641,41 +647,41 @@ export function CollectFlow() {
             </div>
 
             {isReadingPhoto && (
-              <div className="text-xs text-amber-700 font-bold bg-amber-50 p-2 rounded-lg flex items-center gap-2">
-                <span className="animate-spin inline-block">⏳</span> AI द्वारे मीटरचे वाचन सुरू आहे...
+              <div className="font-mono text-xs text-chaos-orange font-bold bg-chaos-black p-2.5 flex items-center gap-2 border border-chaos-black">
+                <span className="animate-spin inline-block">⏳</span> AI OCR LCD READING IN PROGRESS...
               </div>
             )}
 
             {meterPhotoData && !isReadingPhoto && (
-              <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-stone-200">
+              <div className="flex items-center gap-3 bg-white p-2 border-2 border-chaos-black">
                 <img
                   src={meterPhotoData}
                   alt="Meter LCD"
-                  className="w-16 h-12 object-cover rounded border border-stone-300"
+                  className="w-16 h-12 object-cover border border-chaos-black"
                 />
-                <div className="text-xs">
+                <div className="font-mono text-xs">
                   {aiReading?.value !== null && aiReading?.value !== undefined ? (
                     <div>
                       <span className="font-bold text-emerald-800">
-                        AI वाचन: {aiReading.value}%
+                        AI OCR READ: {aiReading.value}%
                       </span>{" "}
-                      <span className="text-stone-500">
-                        ({aiReading.confidence === "high" ? "उच्च खात्री" : "मध्यम"})
+                      <span className="text-chaos-muted">
+                        [{aiReading.confidence === "high" ? "HIGH CONFIDENCE" : "MEDIUM"}]
                       </span>
                       {aiReading.note && (
-                        <span className="block text-stone-500 text-[11px]">{aiReading.note}</span>
+                        <span className="block text-chaos-muted text-[10px] mt-0.5">{aiReading.note}</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-stone-600 font-medium">फोटो जोडला आहे</span>
+                    <span className="text-chaos-muted">PHOTO STORED FOR SYNC</span>
                   )}
                 </div>
               </div>
             )}
 
             {photoNotice && (
-              <div className="text-xs bg-stone-200 text-stone-800 p-2 rounded-lg font-medium">
-                ℹ️ {photoNotice}
+              <div className="font-mono text-xs bg-chaos-canvas border border-chaos-black p-2 text-chaos-black font-medium">
+                [i] {photoNotice}
               </div>
             )}
           </div>
@@ -684,13 +690,13 @@ export function CollectFlow() {
           {hasMismatch && !mismatchConfirmed && (
             <div
               data-testid="mismatch-block"
-              className="bg-amber-50 border-2 border-amber-600 p-3 rounded-xl flex flex-col gap-2"
+              className="bg-amber-50 border-2 border-chaos-orange p-4 shadow-tactile-orange flex flex-col gap-2.5"
             >
-              <div className="flex items-center gap-2 text-amber-900 font-black text-xs sm:text-sm">
+              <div className="flex items-center gap-2 text-amber-950 font-mono font-black text-xs uppercase tracking-wider">
                 <span>⚠️</span>
-                <span>वाचन विसंगती (Reading Mismatch Detected)!</span>
+                <span>वाचन विसंगती // READING MISMATCH DETECTED</span>
               </div>
-              <p className="text-xs text-stone-700 font-medium">
+              <p className="font-sans text-xs text-stone-800 font-medium">
                 AI ने वाचलेले मूल्य <b>{(aiReading!.valueX10! / 10).toFixed(1)}%</b> आहे आणि आपण टाइप केलेले मूल्य <b>{(moistureTenths / 10).toFixed(1)}%</b> आहे. पुढे जाण्यासाठी खालीलपैकी एक पर्याय निवडा:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
@@ -701,17 +707,17 @@ export function CollectFlow() {
                     setMoistureInput((aiReading!.valueX10! / 10).toFixed(1));
                     setMismatchConfirmed(true);
                   }}
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold py-2 px-3 rounded-lg text-center"
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-mono text-xs font-bold py-2.5 px-3 uppercase border-2 border-chaos-black shadow-tactile-sm transition-all"
                 >
-                  ✓ AI वाचन वापरा ({(aiReading!.valueX10! / 10).toFixed(1)}%)
+                  ✓ USE AI ({(aiReading!.valueX10! / 10).toFixed(1)}%)
                 </button>
                 <button
                   type="button"
                   data-testid="btn-confirm-typed-reading"
                   onClick={() => setMismatchConfirmed(true)}
-                  className="bg-stone-800 hover:bg-stone-900 text-white text-xs font-bold py-2 px-3 rounded-lg text-center"
+                  className="bg-chaos-black hover:bg-stone-800 text-white font-mono text-xs font-bold py-2.5 px-3 uppercase border-2 border-chaos-black shadow-tactile-sm transition-all"
                 >
-                  ✓ माझे वाचन निश्चित करा ({(moistureTenths / 10).toFixed(1)}%)
+                  ✓ USE TYPED ({(moistureTenths / 10).toFixed(1)}%)
                 </button>
               </div>
             </div>
@@ -735,14 +741,14 @@ export function CollectFlow() {
 
           {/* Next Button - Blocked when mismatch is unresolved (§10.2) */}
           <Button
-            variant="primary"
+            variant="orange"
             disabled={isBlockedByMismatch || moistureTenths <= 0}
             onClick={() => setStep(4)}
-            className="w-full text-base py-3.5"
+            className="w-full text-base py-3.5 shadow-tactile"
           >
             {isBlockedByMismatch
-              ? "⚠️ विसंगती निश्चित करा (Confirm Mismatch to Proceed)"
-              : "पुढे जा (Next: Summary) →"}
+              ? "⚠️ विसंगती निश्चित करा // RESOLVE MISMATCH"
+              : "पुढे जा // NEXT: SUMMARY →"}
           </Button>
         </div>
       </StepShell>
@@ -761,97 +767,98 @@ export function CollectFlow() {
       onBack={() => setStep(3)}
     >
       <div className="flex flex-col gap-4">
-        {/* Error Alert if any */}
         {saveError && (
-          <div className="p-3 bg-red-100 border-2 border-red-400 rounded-xl text-red-900 text-xs font-bold">
-            ⚠️ {saveError}
+          <div className="p-3 bg-red-100 border-2 border-red-600 text-red-900 font-mono text-xs font-bold uppercase tracking-wide">
+            [!] {saveError}
           </div>
         )}
 
         {/* Farmer Info Card */}
-        <div className="bg-stone-100 p-3.5 rounded-xl border border-stone-300">
+        <div className="bg-chaos-paper border-2 border-chaos-black p-4 shadow-tactile">
           <div className="flex justify-between items-start">
             <div>
-              <span className="text-xs text-stone-500 font-bold block">शेतकरी</span>
-              <p className="text-lg font-black text-stone-900">{selectedMember?.name}</p>
-              <p className="text-xs text-stone-600">
+              <span className="font-mono text-xs text-chaos-muted uppercase tracking-wider block">
+                शेतकरी तपशील // FARMER IDENTITY
+              </span>
+              <p className="font-sans text-xl font-black text-chaos-black mt-0.5">{selectedMember?.name}</p>
+              <p className="font-mono text-xs text-chaos-muted mt-0.5">
                 गाव: {selectedMember?.village} • कोड: {selectedMember?.farmerCode}
               </p>
             </div>
             <div className="text-right">
-              <span className="text-xs bg-stone-900 text-white font-bold px-2 py-0.5 rounded">
+              <span className="font-mono text-xs bg-chaos-black text-chaos-orange font-bold px-2.5 py-1 uppercase tracking-wider border border-chaos-black">
                 {crop === "Soybean" ? "सोयाबीन" : "तूर"} ({grade})
               </span>
             </div>
           </div>
 
           {selectedMember?.consentWithdrawn && (
-            <p className="text-xs font-bold text-red-900 bg-red-100 p-2.5 rounded-lg mt-2 border border-red-300">
-              ⚠️ संमती मागे घेतली: या सभासदाने DPDP कायद्यांतर्गत संमती मागे घेतली आहे. खरेदी नोंदवता येणार नाही.
+            <p className="font-mono text-xs font-bold text-red-900 bg-red-100 p-2.5 mt-3 border-2 border-red-400">
+              [!] संमती मागे घेतली: या सभासदाने DPDP कायद्यांतर्गत संमती मागे घेतली आहे. खरेदी नोंदवता येणार नाही.
             </p>
           )}
 
           {!selectedMember?.consentWithdrawn && !selectedMember?.bankVerified && (
-            <p className="text-[11px] font-bold text-amber-800 bg-amber-50 p-1.5 rounded mt-2 border border-amber-200">
-              ⚠️ बँक खाते अद्याप पडताळलेले नाही. पेमेंटपूर्वी पडताळणी होईल.
+            <p className="font-mono text-xs font-bold text-amber-900 bg-amber-50 p-2 mt-3 border border-amber-300">
+              [i] बँक खाते अद्याप पडताळलेले नाही. पेमेंटपूर्वी पडताळणी होईल.
             </p>
           )}
         </div>
 
         {/* Calculation Details Table */}
-        <div className="bg-white border-2 border-stone-800 rounded-xl p-3.5 flex flex-col gap-2.5 text-xs">
-          <div className="flex justify-between text-stone-700">
-            <span>एकूण वजन (Gross):</span>
-            <span className="font-bold text-stone-900">{(grossTenths / 10).toFixed(1)} किग्रॅ</span>
+        <div className="bg-white border-2 border-chaos-black p-4 flex flex-col gap-2.5 font-mono text-xs shadow-tactile-sm">
+          <div className="flex justify-between text-chaos-muted uppercase">
+            <span>एकूण वजन (GROSS WEIGHT):</span>
+            <span className="font-black text-chaos-black">{(grossTenths / 10).toFixed(1)} KG</span>
           </div>
 
-          <div className="flex justify-between text-stone-700">
-            <span>काटा वजन (Tare):</span>
-            <span className="font-bold text-stone-900">{(tareTenths / 10).toFixed(1)} किग्रॅ</span>
+          <div className="flex justify-between text-chaos-muted uppercase">
+            <span>काटा वजन (TARE WEIGHT):</span>
+            <span className="font-black text-chaos-black">{(tareTenths / 10).toFixed(1)} KG</span>
           </div>
 
-          <div className="flex justify-between text-stone-700 border-t border-stone-200 pt-1.5">
-            <span>कपातीपूर्वी निव्वळ:</span>
-            <span className="font-bold text-stone-900">{(beforeDeductionTenths / 10).toFixed(1)} किग्रॅ</span>
+          <div className="flex justify-between text-chaos-muted uppercase border-t border-dashed border-stone-300 pt-2">
+            <span>कपातीपूर्वी निव्वळ (BEFORE DEDUCTION):</span>
+            <span className="font-black text-chaos-black">{(beforeDeductionTenths / 10).toFixed(1)} KG</span>
           </div>
 
-          <div className="flex justify-between text-stone-700">
+          <div className="flex justify-between text-chaos-muted uppercase">
             <span>ओलावा ({ (moistureTenths / 10).toFixed(1) }%) कपात:</span>
-            <span className="font-bold text-red-700">- {(deductionTenths / 10).toFixed(1)} किग्रॅ</span>
+            <span className="font-black text-red-600">- {(deductionTenths / 10).toFixed(1)} KG</span>
           </div>
 
-          <div className="flex justify-between text-stone-900 border-t-2 border-stone-300 pt-2 text-sm font-black">
-            <span>निव्वळ देय वजन (Net):</span>
-            <span className="text-brand">{(netTenths / 10).toFixed(1)} किग्रॅ</span>
+          <div className="flex justify-between text-chaos-black border-t-2 border-chaos-black pt-2 text-sm font-black uppercase">
+            <span>निव्वळ देय वजन (NET BILLABLE):</span>
+            <span className="text-chaos-orange font-mono">{(netTenths / 10).toFixed(1)} KG</span>
           </div>
 
-          <div className="flex justify-between text-stone-700 border-t border-stone-200 pt-1.5">
-            <span>दर (प्रति क्विंटल):</span>
-            <span className="font-bold text-stone-900">₹{rateRupees} / क्विंटल</span>
+          <div className="flex justify-between text-chaos-muted uppercase border-t border-dashed border-stone-300 pt-2">
+            <span>दर (PRICE PER QUINTAL):</span>
+            <span className="font-black text-chaos-black">₹{rateRupees} / QTL</span>
           </div>
         </div>
 
-        {/* AMOUNT HERO - Largest element on screen (§13.1) */}
-        <div className="bg-emerald-50 border-2 border-emerald-600 p-4 rounded-xl text-center shadow">
-          <span className="text-xs font-black text-emerald-800 uppercase tracking-wider block">
-            एकूण देय रक्कम (Payable Amount)
+        {/* AMOUNT HERO - Monumental Brutalist Element (§13.1) */}
+        <div className="bg-chaos-paper border-2 border-chaos-black p-5 text-center shadow-tactile-lg">
+          <span className="font-mono text-xs font-bold text-chaos-muted uppercase tracking-widest block">
+            एकूण देय रक्कम // TOTAL PAYABLE DISBURSEMENT
           </span>
-          <span className="text-4xl sm:text-5xl font-black text-stone-950 tracking-tight block my-1">
+          <span className="font-display font-black text-5xl sm:text-6xl text-chaos-black tracking-tight block my-1">
             {formatRupees(amountPaiseValue)}
           </span>
-          <span className="text-xs font-bold text-emerald-800 block">
-            ४८ तासांत बँक खात्यावर जमा होतील
+          <span className="font-mono text-xs font-bold text-chaos-orange block uppercase tracking-wider">
+            ✓ ४८ तासांत बँक खात्यावर थेट जमा (DBT WITHIN 48H)
           </span>
         </div>
 
         {/* Save Purchase Button */}
         <Button
-          variant="primary"
+          variant="orange"
           disabled={isSaving || netTenths <= 0 || !!selectedMember?.consentWithdrawn}
           onClick={handleSavePurchase}
-          className="w-full text-lg py-4 font-black shadow-lg min-h-touch bg-brand disabled:opacity-50"
+          className="w-full text-lg py-4 font-black shadow-tactile-lg min-h-[56px] disabled:opacity-50"
         >
-          {isSaving ? "खरेदी साठवत आहे..." : "✓ खरेदी साठवा (Save Purchase)"}
+          {isSaving ? "खरेदी साठवत आहे..." : "✓ खरेदी साठवा // CONFIRM & PRINT SLIP"}
         </Button>
       </div>
     </StepShell>
