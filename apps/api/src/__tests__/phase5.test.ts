@@ -213,11 +213,11 @@ describe("Phase 5: AI Reading, Flags, Review Queue, Payment Runs & Retry (§10, 
     });
 
     it("holds entry with YIELD_HIGH when season delivery exceeds acreage quota", async () => {
-      // member-4 has landTenthsAcre = 20 (2.0 acres)
+      // member-8 has landTenthsAcre = 20 (2.0 acres)
       // Max yield for soybean = 2.0 acres * 1,200 kg = 2,400 kg = 24,000 tenths
       const excessiveNetX10 = 35000; // 3,500.0 kg (> 2,400 kg)
       const highYieldEntry = await createSignedSyncEntry({
-        memberId: "member-4",
+        memberId: "member-8",
         grossX10: 36000,
         tareX10: 1000,
         moistureX10: 120,

@@ -127,7 +127,7 @@ function simulateDisplayReading(
   kind: "scale" | "meter"
 ): PhotoReadResult {
   // If base64 contains hint comments or test cues
-  if (cleanBase64.includes("MOCK_FAIL") || cleanBase64.length < 50) {
+  if (cleanBase64.includes("MOCK_FAIL") || cleanBase64.length === 0) {
     return {
       value: null,
       valueX10: null,
