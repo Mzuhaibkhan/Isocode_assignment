@@ -11,6 +11,9 @@ import { purchasesRoutes } from "./routes/purchases.js";
 import { smsRoutes } from "./routes/sms.js";
 import { devicesRoutes } from "./routes/devices.js";
 import { syncRoutes } from "./routes/sync.js";
+import { photosRoutes } from "./routes/photos.js";
+import { reviewRoutes } from "./routes/review.js";
+import { paymentsRoutes } from "./routes/payments.js";
 import { netWeightX10, amountPaise, formatRupees } from "@procurement/shared";
 
 export function buildServer(): FastifyInstance {
@@ -50,6 +53,9 @@ export function buildServer(): FastifyInstance {
   app.register(smsRoutes);
   app.register(devicesRoutes);
   app.register(syncRoutes);
+  app.register(photosRoutes);
+  app.register(reviewRoutes);
+  app.register(paymentsRoutes);
 
   // Role guarded test endpoints for verification
   app.get(
