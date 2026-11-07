@@ -109,147 +109,130 @@ export function App() {
 
   const activeSlip = sampleSlips[sampleIndex];
 
+  const navItems: Array<{
+    id: typeof activeTab;
+    marathi: string;
+    en: string;
+    badge?: number;
+  }> = [
+    { id: "collect", marathi: "नवीन खरेदी", en: "Collect" },
+    { id: "members", marathi: "सभासद", en: "Members" },
+    { id: "prices", marathi: "दर फलक", en: "Prices" },
+    { id: "sync", marathi: "सिंक स्थिती", en: "Sync", badge: pendingSyncCount },
+    { id: "review", marathi: "पुनरावलोकन", en: "Review" },
+    { id: "payments", marathi: "देयक फाईल", en: "Payments" },
+    { id: "devices", marathi: "साधने", en: "Devices" },
+    { id: "sms", marathi: "SMS नोंदी", en: "SMS" },
+    { id: "slips", marathi: "नमुना पावती", en: "Slips" },
+  ];
+
   return (
-    <div className="min-h-screen bg-bg-main flex flex-col">
-      {/* Top Navbar */}
-      <header className="bg-stone-900 text-white border-b-2 border-stone-800">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-2">
-          <div className="flex items-center gap-3">
-            <span className="bg-emerald-600 text-white text-xs font-black px-2 py-0.5 rounded">
-              {user.role === "office_manager" ? "HQ OFFICE" : "CENTRE C07"}
-            </span>
-            <h1 className="text-base font-black tracking-tight">
-              लातूर शेतकरी उत्पादक कंपनी
-            </h1>
+    <div className="min-h-screen bg-chaos-canvas text-chaos-black flex flex-col font-sans selection:bg-chaos-orange selection:text-white">
+      {/* Top Editorial Ticker Bar */}
+      <div className="bg-chaos-black text-chaos-canvas px-4 py-1 text-[11px] font-mono uppercase tracking-widest flex items-center justify-between border-b border-stone-800">
+        <div className="flex items-center gap-3">
+          <span className="inline-block w-2 h-2 bg-chaos-orange animate-pulse"></span>
+          <span>LATUR FPC // FIELD PROCUREMENT SYSTEM</span>
+          <span className="hidden md:inline text-chaos-muted">• KHARIF 2026-27</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="hidden sm:inline text-chaos-muted font-mono">
+            SOYBEAN: ₹4,850/QTL • TUR: ₹7,200/QTL
+          </span>
+          <span className="text-chaos-orange font-bold font-mono">AES-GCM P-256</span>
+        </div>
+      </div>
+
+      {/* Main Brutalist Masthead Header */}
+      <header className="bg-chaos-paper border-b-2 border-chaos-black sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+          {/* Logo & Org Title */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 bg-chaos-black text-chaos-orange border-2 border-chaos-black flex items-center justify-center font-display font-black text-2xl shadow-tactile-sm">
+              L
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-display font-black text-xl sm:text-2xl tracking-tight uppercase leading-none">
+                  लातूर शेतकरी उत्पादक कंपनी
+                </span>
+                <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-chaos-orange text-chaos-black uppercase tracking-wider">
+                  {user.role === "office_manager" ? "HQ OFFICE" : "CENTRE C07"}
+                </span>
+              </div>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-chaos-muted mt-0.5">
+                LATUR DISTRICT FARMER PRODUCER CO-OPERATIVE LTD.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs">
-            {/* Online / Offline status badge */}
-            <div className="flex items-center gap-1.5 bg-stone-800 px-2 py-1 rounded">
+          {/* Right Status Meta & User Controls */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Online / Offline Status Badge */}
+            <div
+              className={`flex items-center gap-2 px-2.5 py-1.5 border-2 border-chaos-black text-xs font-mono font-bold ${
+                isOnline ? "bg-white text-emerald-800" : "bg-red-100 text-red-700"
+              }`}
+            >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isOnline ? "bg-emerald-400" : "bg-red-400"
+                  isOnline ? "bg-emerald-600 animate-ping" : "bg-red-600"
                 }`}
               />
-              <span className="text-stone-300 font-bold">
-                {isOnline ? "ऑनलाइन" : "ऑफलाइन"}
+              <span>{isOnline ? "ONLINE // जोडलेले" : "OFFLINE // स्थानिक"}</span>
+            </div>
+
+            {/* User Pill */}
+            <div className="hidden lg:flex flex-col text-right">
+              <span className="font-bold text-xs text-chaos-black leading-tight">
+                {user.name}
+              </span>
+              <span className="font-mono text-[10px] uppercase text-chaos-muted">
+                {user.role === "office_manager" ? "Office Manager" : "Field Operator"}
               </span>
             </div>
 
-            <span className="font-bold text-stone-300">
-              {user.name} ({user.role === "office_manager" ? "व्यवस्थापक" : "ऑपरेटर"})
-            </span>
+            {/* Logout Button */}
             <button
               onClick={() => setUser(null)}
-              className="text-red-300 font-bold hover:underline px-2 py-1"
+              className="px-3 py-1.5 border-2 border-chaos-black font-mono text-xs font-bold uppercase tracking-wider bg-chaos-canvas hover:bg-chaos-black hover:text-white transition-all shadow-tactile-sm active:translate-y-0.5"
             >
-              बाहेर पडा (Logout)
+              बाहेर पडा (Exit)
             </button>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="max-w-4xl mx-auto px-4 flex gap-1 border-t border-stone-800 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab("collect")}
-            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === "collect"
-                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
-                : "border-transparent text-stone-400 hover:text-white"
-            }`}
-          >
-            🌾 नवीन खरेदी (Collection)
-          </button>
-          <button
-            onClick={() => setActiveTab("members")}
-            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === "members"
-                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
-                : "border-transparent text-stone-400 hover:text-white"
-            }`}
-          >
-            👥 सभासद (Members)
-          </button>
-          <button
-            onClick={() => setActiveTab("prices")}
-            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === "prices"
-                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
-                : "border-transparent text-stone-400 hover:text-white"
-            }`}
-          >
-            💰 दर फलक (Price Board)
-          </button>
-          <button
-            onClick={() => setActiveTab("sync")}
-            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === "sync"
-                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
-                : "border-transparent text-stone-400 hover:text-white"
-            }`}
-          >
-            <span>🔄 सिंक स्थिती (Sync)</span>
-            {pendingSyncCount > 0 && (
-              <span className="bg-amber-400 text-stone-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                {pendingSyncCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("review")}
-            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === "review"
-                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
-                : "border-transparent text-stone-400 hover:text-white"
-            }`}
-          >
-            📋 पुनरावलोकन (Review)
-          </button>
-          <button
-            onClick={() => setActiveTab("payments")}
-            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === "payments"
-                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
-                : "border-transparent text-stone-400 hover:text-white"
-            }`}
-          >
-            💳 देयक फाईल (Payments)
-          </button>
-          <button
-            onClick={() => setActiveTab("devices")}
-            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === "devices"
-                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
-                : "border-transparent text-stone-400 hover:text-white"
-            }`}
-          >
-            📱 साधने (Devices)
-          </button>
-          <button
-            onClick={() => setActiveTab("sms")}
-            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === "sms"
-                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
-                : "border-transparent text-stone-400 hover:text-white"
-            }`}
-          >
-            💬 SMS नोंदी (SMS Logs)
-          </button>
-          <button
-            onClick={() => setActiveTab("slips")}
-            className={`min-h-touch px-3 py-2 text-sm font-extrabold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === "slips"
-                ? "border-emerald-400 text-emerald-300 bg-stone-800/40"
-                : "border-transparent text-stone-400 hover:text-white"
-            }`}
-          >
-            📄 नमुना पावती (Samples)
-          </button>
-        </div>
+        {/* Tactical Index Tab Rail */}
+        <nav className="border-t-2 border-chaos-black bg-chaos-canvas overflow-x-auto scrollbar-none">
+          <div className="max-w-6xl mx-auto px-4 flex gap-1 py-1">
+            {navItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`min-h-[44px] px-3.5 py-1.5 border-2 transition-all whitespace-nowrap flex items-center gap-2 text-xs uppercase tracking-wide font-bold ${
+                    isActive
+                      ? "bg-chaos-black text-white border-chaos-black shadow-tactile-orange translate-y-[-1px]"
+                      : "bg-chaos-paper text-chaos-black border-transparent hover:border-chaos-black hover:bg-white"
+                  }`}
+                >
+                  <span className="font-sans font-extrabold">{item.marathi}</span>
+                  <span className="font-mono text-[10px] opacity-75">[{item.en}]</span>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="bg-chaos-orange text-chaos-black font-mono text-[10px] font-black px-1.5 py-0.2 rounded-none border border-chaos-black">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
       </header>
 
-      {/* Main View Port */}
-      <main className="flex-1 max-w-4xl w-full mx-auto p-3 sm:p-5">
+      {/* Main Editorial Body */}
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 animate-fadeIn">
         {activeTab === "collect" && <CollectFlow />}
         {activeTab === "members" && <MemberList />}
         {activeTab === "prices" && <PriceBoard />}
@@ -259,7 +242,28 @@ export function App() {
         {activeTab === "devices" && <DeviceManagement />}
         {activeTab === "sms" && <SmsLogView />}
         {activeTab === "slips" && (
-          <div className="flex flex-col gap-4">
+          <div className="max-w-xl mx-auto flex flex-col gap-6">
+            <div className="border-2 border-chaos-black bg-chaos-paper p-4 shadow-tactile">
+              <span className="font-mono text-xs uppercase text-chaos-muted tracking-wider block mb-1">
+                DEMO SLIP PREVIEW // नमुना पावती पडताळणी
+              </span>
+              <p className="font-display text-2xl font-black uppercase tracking-tight">
+                SELECT A PHYSICAL RECEIPT SAMPLE
+              </p>
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                {sampleSlips.map((s, idx) => (
+                  <Button
+                    key={s.slipNo}
+                    variant={sampleIndex === idx ? "orange" : "secondary"}
+                    onClick={() => setSampleIndex(idx)}
+                    className="text-xs py-2"
+                  >
+                    {s.slipNo}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <Slip
               slipNo={activeSlip.slipNo}
               farmerName={activeSlip.farmerName}
@@ -270,27 +274,30 @@ export function App() {
               amountPaise={activeSlip.amountPaise}
               smsStatus="sent"
             />
-
-            <div className="bg-white border border-stone-300 p-3 rounded-xl max-w-sm mx-auto w-full flex flex-col gap-2">
-              <span className="text-xs font-bold text-text-muted">
-                नमुना पावती निवडा:
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                {sampleSlips.map((s, idx) => (
-                  <Button
-                    key={s.slipNo}
-                    variant={sampleIndex === idx ? "primary" : "secondary"}
-                    onClick={() => setSampleIndex(idx)}
-                    className="text-xs py-2"
-                  >
-                    {s.slipNo}
-                  </Button>
-                ))}
-              </div>
-            </div>
           </div>
         )}
       </main>
+
+      {/* Polite Chaos Editorial Footer */}
+      <footer className="mt-auto border-t-2 border-chaos-black bg-chaos-paper py-6 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-xs">
+          <div>
+            <p className="font-display text-xl font-black uppercase tracking-tight">
+              LATUR DISTRICT FARMER PRODUCER CO.
+            </p>
+            <p className="font-mono text-[11px] text-chaos-muted uppercase tracking-wider">
+              OFFLINE-FIRST ENCLAVE WEIGHMENT & DIRECT BENEFIT TRANSFER INFRASTRUCTURE
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] text-chaos-muted">
+            <span>VERSION 2.4.0-CHAOS</span>
+            <span>•</span>
+            <span>DEXIE SECURE REPO</span>
+            <span>•</span>
+            <span className="text-chaos-orange font-bold font-mono">STANDALONE SHED READY</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

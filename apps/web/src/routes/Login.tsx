@@ -39,7 +39,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   const handleOperatorLogin = async () => {
     if (pin.length < 4) {
-      setOperatorError("कृपया ४ अंकी पिन टाका");
+      setOperatorError("कृपया ४ अंकी पिन टाका (ENTER 4 DIGIT PIN)");
       return;
     }
 
@@ -68,7 +68,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         onLoginSuccess(data.user);
       }
     } catch {
-      // In offline / mock mode for Phase 1 demo
+      // Offline / local fallback for shed testing
       if (pin === "1234" || pin === "5678") {
         if (onLoginSuccess) {
           onLoginSuccess({ role: "operator", name: "Ramesh Patil" });
@@ -98,61 +98,77 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         body: JSON.stringify({
           role: "office_manager",
           email,
-          password,
-        }),
-      });
+        password,
+      }),
+    });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setOfficeError(data.error || "Login failed");
-        return;
-      }
-
-      const data = await res.json();
-      if (onLoginSuccess) {
-        onLoginSuccess(data.user);
-      }
-    } catch {
-      if (email === "office@latur-fpc.org" && password === "Password123!") {
-        if (onLoginSuccess) {
-          onLoginSuccess({ role: "office_manager", name: "Anil Kadam" });
-        }
-      } else {
-        setOfficeError("Invalid credentials (Demo: office@latur-fpc.org / Password123!)");
-      }
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setOfficeError(data.error || "Login failed");
+      return;
     }
-  };
+
+    const data = await res.json();
+    if (onLoginSuccess) {
+      onLoginSuccess(data.user);
+    }
+  } catch {
+    if (email === "office@latur-fpc.org" && password === "Password123!") {
+      if (onLoginSuccess) {
+        onLoginSuccess({ role: "office_manager", name: "Anil Kadam" });
+      }
+    } else {
+      setOfficeError("Invalid credentials (Demo: office@latur-fpc.org / Password123!)");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
-    <div className="min-h-screen bg-bg-main flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-sm bg-white border-2 border-stone-800 rounded-2xl shadow-lg p-6">
-        {/* App Title */}
-        <div className="text-center mb-6">
-          <span className="text-xs font-bold text-brand uppercase tracking-wider">
-            लातूर शेतकरी उत्पादक कंपनी
-          </span>
-          <h1 className="text-2xl font-black text-text-main mt-1">
-            खरेदी व भरणा ॲप
+    <div className="min-h-screen bg-chaos-canvas text-chaos-black flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
+      {/* Background Technical Watermark */}
+      <div className="fixed top-4 left-4 font-mono text-[11px] text-chaos-muted tracking-widest uppercase hidden sm:block">
+        [ SYS: PROC-AUT-2026 // WORKROOM SHED TERMINAL ]
+      </div>
+      <div className="fixed top-4 right-4 font-mono text-[11px] text-chaos-muted tracking-widest uppercase hidden sm:block">
+        [ AUTH: AES-GCM 256 BIT KEYED ]
+      </div>
+
+      <div className="w-full max-w-md bg-chaos-paper border-2 border-chaos-black shadow-tactile-lg p-6 sm:p-8 animate-slideUp">
+        {/* Masthead Title */}
+        <div className="border-b-2 border-chaos-black pb-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-mono text-xs uppercase tracking-widest text-chaos-orange font-bold">
+              PORTAL ACCESS // प्रवेशद्वार
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-wider bg-chaos-black text-white px-2 py-0.5">
+              VERSION 2.4
+            </span>
+          </div>
+          <h1 className="font-display font-black text-3xl sm:text-4xl uppercase tracking-tight leading-none text-chaos-black">
+            लातूर शेतकरी उत्पादक
           </h1>
+          <p className="font-mono text-xs uppercase tracking-wider text-chaos-muted mt-1">
+            FARMER PROCUREMENT & DISBURSEMENT PORTAL
+          </p>
         </div>
 
         {/* Role Toggle Tabs */}
-        <div className="grid grid-cols-2 gap-1 bg-stone-100 p-1.5 rounded-xl border border-stone-300 mb-6">
+        <div className="grid grid-cols-2 gap-2 mb-6">
           <button
             type="button"
             onClick={() => {
               setRole("operator");
               setOperatorError("");
             }}
-            className={`min-h-touch py-2 text-sm font-extrabold rounded-lg transition-all ${
+            className={`min-h-[48px] px-3 py-2 border-2 transition-all font-mono text-xs uppercase font-bold tracking-wider text-center ${
               role === "operator"
-                ? "bg-stone-900 text-white shadow-sm"
-                : "text-stone-700 hover:text-black"
+                ? "bg-chaos-black text-white border-chaos-black shadow-tactile-orange translate-y-[-1px]"
+                : "bg-chaos-canvas text-chaos-black border-chaos-black hover:bg-white"
             }`}
           >
-            केंद्र ऑपरेटर (PIN)
+            01. ऑपरेटर (PIN)
           </button>
           <button
             type="button"
@@ -160,62 +176,66 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               setRole("office_manager");
               setOfficeError("");
             }}
-            className={`min-h-touch py-2 text-sm font-extrabold rounded-lg transition-all ${
+            className={`min-h-[48px] px-3 py-2 border-2 transition-all font-mono text-xs uppercase font-bold tracking-wider text-center ${
               role === "office_manager"
-                ? "bg-stone-900 text-white shadow-sm"
-                : "text-stone-700 hover:text-black"
+                ? "bg-chaos-black text-white border-chaos-black shadow-tactile-orange translate-y-[-1px]"
+                : "bg-chaos-canvas text-chaos-black border-chaos-black hover:bg-white"
             }`}
           >
-            Office Manager
+            02. व्यवस्थापक (HQ)
           </button>
         </div>
 
         {role === "operator" ? (
           /* Operator Fast PIN Login (Shed Friendly) */
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between bg-stone-50 px-3 py-2 rounded-xl border border-stone-300">
-              <label htmlFor="centre-select" className="text-xs font-bold text-text-muted">
-                खरेदी केंद्र:
+          <div className="flex flex-col gap-5">
+            {/* Centre Selector */}
+            <div className="border-2 border-chaos-black bg-chaos-canvas p-3 flex items-center justify-between">
+              <label htmlFor="centre-select" className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-muted">
+                खरेदी केंद्र (CENTRE):
               </label>
               <select
                 id="centre-select"
                 value={centreCode}
                 onChange={(e) => setCentreCode(e.target.value)}
-                className="bg-transparent font-bold text-base text-text-main focus:outline-none"
+                className="bg-transparent font-mono text-sm font-black uppercase text-chaos-black focus:outline-none cursor-pointer"
               >
-                <option value="C07">C07 - औसा (Ausa)</option>
+                <option value="C07">C07 - औसा (Ausa Shed)</option>
                 <option value="C12">C12 - रेणापूर (Renapur)</option>
               </select>
             </div>
 
             {/* PIN Display */}
-            <div className="text-center py-2">
-              <span className="text-xs font-bold text-text-muted block mb-1">
-                ४ अंकी ऑपरेटर पिन टाका
+            <div className="text-center py-1">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-muted block mb-2">
+                ४ अंकी ऑपरेटर पिन टाका // ENTER OPERATOR PIN
               </span>
-              <div className="flex justify-center gap-3">
-                {[0, 1, 2, 3].map((idx) => (
-                  <div
-                    key={idx}
-                    className={`w-12 h-14 rounded-xl border-2 flex items-center justify-center text-3xl font-black ${
-                      pin.length > idx
-                        ? "border-brand bg-brand-light/30 text-brand"
-                        : "border-stone-300 bg-white"
-                    }`}
-                  >
-                    {pin.length > idx ? "•" : ""}
-                  </div>
-                ))}
+              <div className="flex justify-center gap-2.5">
+                {[0, 1, 2, 3].map((idx) => {
+                  const hasDigit = pin.length > idx;
+                  return (
+                    <div
+                      key={idx}
+                      className={`w-12 h-14 border-2 flex items-center justify-center font-display text-4xl font-black transition-all ${
+                        hasDigit
+                          ? "border-chaos-black bg-chaos-orange text-chaos-black shadow-tactile-sm"
+                          : "border-chaos-black/40 bg-chaos-canvas text-chaos-muted"
+                      }`}
+                    >
+                      {hasDigit ? "•" : ""}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {operatorError && (
-              <p className="text-sm font-bold text-danger text-center">
-                {operatorError}
-              </p>
+              <div className="border-2 border-red-600 bg-red-50 p-2 text-center font-mono text-xs font-bold text-red-700 uppercase tracking-wide">
+                [!] {operatorError}
+              </div>
             )}
 
-            {/* Big Numpad */}
+            {/* Tactile High-Speed Numpad */}
             <Numpad
               onDigit={handleDigit}
               onClear={handleClear}
@@ -225,19 +245,20 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
             <Button
               type="button"
+              variant="orange"
               onClick={handleOperatorLogin}
               disabled={loading || pin.length < 4}
               size="large"
               className="w-full mt-2"
             >
-              {loading ? "लॉगिन होत आहे..." : "लॉगिन करा (Login)"}
+              {loading ? "प्रवेश चालू आहे..." : "लॉगिन करा // ENTER SYSTEM"}
             </Button>
           </div>
         ) : (
           /* Office Manager Login Form */
           <form onSubmit={handleOfficeLogin} className="flex flex-col gap-4">
             <Field
-              label="Office Email"
+              label="कार्यालय ईमेल (HQ Email)"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -245,7 +266,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               required
             />
             <Field
-              label="Password"
+              label="पासवर्ड (Security Password)"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -253,20 +274,26 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               required
             />
             {officeError && (
-              <p className="text-sm font-bold text-danger">{officeError}</p>
+              <div className="border-2 border-red-600 bg-red-50 p-2 text-center font-mono text-xs font-bold text-red-700 uppercase tracking-wide">
+                [!] {officeError}
+              </div>
             )}
             <Button
               type="submit"
+              variant="primary"
               disabled={loading}
               size="large"
               className="w-full mt-2"
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "सत्यापन होत आहे..." : "साइन इन करा // SIGN IN"}
             </Button>
           </form>
         )}
       </div>
+
+      <div className="mt-6 text-center font-mono text-[11px] text-chaos-muted uppercase tracking-wider">
+        LATUR DISTRICT PRODUCER CO. // SUNLIGHT READABLE DISPLAY (§13.1)
+      </div>
     </div>
   );
 };
-
