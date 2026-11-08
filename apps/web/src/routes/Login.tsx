@@ -2,9 +2,21 @@ import React, { useState } from "react";
 import { Button } from "../ui/Button.js";
 import { Field } from "../ui/Field.js";
 import { Numpad } from "../ui/Numpad.js";
+import { db, getActiveUser, saveActiveUser, isOfflineUnlockValid, ActiveUserRecord } from "../offline/db.js";
+import { t } from "../i18n/mr.js";
 
 export interface LoginProps {
-  onLoginSuccess?: (user: { role: string; name: string }) => void;
+  onLoginSuccess?: (user: ActiveUserRecord, nextSlipNo?: number) => void;
+}
+
+// SHA-256 of pin + centreCode, stored locally so an offline unlock can only
+// happen on a device that previously verified this exact PIN with the server.
+async function pinFingerprint(pin: string, centreCode: string): Promise<string> {
+  const bytes = new TextEncoder().encode(`${pin}:${centreCode}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
@@ -39,7 +51,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   const handleOperatorLogin = async () => {
     if (pin.length < 4) {
-      setOperatorError("कृपया ४ अंकी पिन टाका (ENTER 4 DIGIT PIN)");
+      setOperatorError(t("auth.pinTooShort"));
       return;
     }
 
@@ -59,22 +71,39 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setOperatorError(data.error || "लॉगिन अयशस्वी. कृपया पिन तपासा.");
+        setOperatorError(data.error || t("auth.loginFailed"));
         return;
       }
 
       const data = await res.json();
-      if (onLoginSuccess) {
-        onLoginSuccess(data.user);
-      }
+      const user: ActiveUserRecord = {
+        id: data.user.id,
+        role: data.user.role,
+        name: data.user.name,
+        centreId: data.user.centreId,
+        centreCode: data.user.centreCode,
+        authAt: new Date().toISOString(),
+      };
+      await saveActiveUser(user);
+      await db.meta.put({ key: "pinFingerprint", value: await pinFingerprint(pin, user.centreCode ?? centreCode) });
+      onLoginSuccess?.(user, data.nextSlipNo);
     } catch {
-      // Offline / local fallback for shed testing
-      if (pin === "1234" || pin === "5678") {
-        if (onLoginSuccess) {
-          onLoginSuccess({ role: "operator", name: "Ramesh Patil" });
-        }
+      // Offline unlock: only for a device that already verified this centre +
+      // PIN with the server within the last 48 hours. No hardcoded demo PINs.
+      const cached = await getActiveUser();
+      const storedFingerprint = (await db.meta.get("pinFingerprint"))?.value as string | undefined;
+
+      if (
+        cached &&
+        cached.role === "operator" &&
+        cached.centreCode === centreCode &&
+        isOfflineUnlockValid(cached) &&
+        storedFingerprint &&
+        storedFingerprint === (await pinFingerprint(pin, centreCode))
+      ) {
+        onLoginSuccess?.(cached);
       } else {
-        setOperatorError("अवैध पिन (डेमो पिन: 1234)");
+        setOperatorError(t("auth.offlineLocked"));
       }
     } finally {
       setLoading(false);
@@ -84,7 +113,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const handleOfficeLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setOfficeError("Please fill in email and password");
+      setOfficeError(t("auth.officeFill"));
       return;
     }
 
@@ -98,32 +127,32 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         body: JSON.stringify({
           role: "office_manager",
           email,
-        password,
-      }),
-    });
+          password,
+        }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setOfficeError(data.error || "Login failed");
-      return;
-    }
-
-    const data = await res.json();
-    if (onLoginSuccess) {
-      onLoginSuccess(data.user);
-    }
-  } catch {
-    if (email === "office@latur-fpc.org" && password === "Password123!") {
-      if (onLoginSuccess) {
-        onLoginSuccess({ role: "office_manager", name: "Anil Kadam" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setOfficeError(data.error || t("auth.officeFailed"));
+        return;
       }
-    } else {
-      setOfficeError("Invalid credentials (Demo: office@latur-fpc.org / Password123!)");
+
+      const data = await res.json();
+      const user: ActiveUserRecord = {
+        id: data.user.id,
+        role: data.user.role,
+        name: data.user.name,
+        authAt: new Date().toISOString(),
+      };
+      await saveActiveUser(user);
+      onLoginSuccess?.(user);
+    } catch {
+      // The office works from HQ and must always authenticate against the server.
+      setOfficeError(t("auth.officeOffline"));
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-chaos-canvas text-chaos-black flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
@@ -140,17 +169,17 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <div className="border-b-2 border-chaos-black pb-4 mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="font-mono text-xs uppercase tracking-widest text-chaos-orange font-bold">
-              PORTAL ACCESS // प्रवेशद्वार
+              {t("auth.portalAccess")}
             </span>
             <span className="font-mono text-[10px] uppercase tracking-wider bg-chaos-black text-white px-2 py-0.5">
               VERSION 2.4
             </span>
           </div>
           <h1 className="font-display font-black text-3xl sm:text-4xl uppercase tracking-tight leading-none text-chaos-black">
-            लातूर शेतकरी उत्पादक
+            {t("auth.orgTitle")}
           </h1>
           <p className="font-mono text-xs uppercase tracking-wider text-chaos-muted mt-1">
-            FARMER PROCUREMENT & DISBURSEMENT PORTAL
+            {t("auth.orgSub")}
           </p>
         </div>
 
@@ -192,7 +221,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             {/* Centre Selector */}
             <div className="border-2 border-chaos-black bg-chaos-canvas p-3 flex items-center justify-between">
               <label htmlFor="centre-select" className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-muted">
-                खरेदी केंद्र (CENTRE):
+                {t("auth.centreLabel")}
               </label>
               <select
                 id="centre-select"
@@ -208,7 +237,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             {/* PIN Display */}
             <div className="text-center py-1">
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-muted block mb-2">
-                ४ अंकी ऑपरेटर पिन टाका // ENTER OPERATOR PIN
+                {t("auth.enterPin")}
               </span>
               <div className="flex justify-center gap-2.5">
                 {[0, 1, 2, 3].map((idx) => {

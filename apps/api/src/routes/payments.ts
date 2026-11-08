@@ -36,10 +36,8 @@ export async function paymentsRoutes(app: FastifyInstance) {
       const runs = await db
         .select({
           id: schema.paymentRuns.id,
-          createdBy: schema.paymentRuns.createdBy,
           createdAt: schema.paymentRuns.createdAt,
           totalPaise: schema.paymentRuns.totalPaise,
-          fileKey: schema.paymentRuns.fileKey,
           kind: schema.paymentRuns.kind,
           parentRunId: schema.paymentRuns.parentRunId,
           status: schema.paymentRuns.status,
@@ -49,7 +47,29 @@ export async function paymentsRoutes(app: FastifyInstance) {
         .leftJoin(schema.users, eq(schema.paymentRuns.createdBy, schema.users.id))
         .orderBy(desc(schema.paymentRuns.createdAt));
 
-      return reply.send({ runs });
+      const itemCounts = await db
+        .select({
+          runId: schema.paymentItems.runId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(schema.paymentItems)
+        .groupBy(schema.paymentItems.runId);
+      const farmersByRun = new Map(itemCounts.map((c: any) => [c.runId, c.count]));
+
+      // Format for the web UI contract (§12): totalAmountPaise/totalFarmers/
+      // createdByName, and a normalized kind of "standard" | "retry".
+      return reply.send({
+        runs: runs.map((r: any) => ({
+          id: r.id,
+          kind: r.kind === "retry" ? "retry" : "standard",
+          parentRunId: r.parentRunId,
+          totalFarmers: farmersByRun.get(r.id) ?? 0,
+          totalAmountPaise: r.totalPaise,
+          status: r.status,
+          createdByName: r.creatorName ?? "कार्यालय",
+          createdAt: r.createdAt,
+        })),
+      });
     }
   );
 
@@ -58,7 +78,9 @@ export async function paymentsRoutes(app: FastifyInstance) {
     "/payment-runs/eligible-purchases",
     { preHandler: requireAuth(["office_manager"]) },
     async (_req: FastifyRequest, reply: FastifyReply) => {
-      // Find purchases that are 'approved' or 'accepted' (unheld) and not yet in 'paid' status
+      // Find purchases that are 'approved' or 'accepted' (unheld) and not
+      // already in payment ('in_payment') or paid — the status column is the
+      // single source of truth for eligibility (§12).
       const eligible = await db
         .select({
           id: schema.purchases.id,
@@ -97,6 +119,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
 
           return {
             ...p,
+            netKg: Number(p.netX10) / 10,
             snapshot,
             isBankVerified,
           };
@@ -114,20 +137,28 @@ export async function paymentsRoutes(app: FastifyInstance) {
     async (req: FastifyRequest, reply: FastifyReply) => {
       const { id } = req.params as { id: string };
 
-      const [run] = await db
-        .select()
+      const [runRow] = await db
+        .select({
+          id: schema.paymentRuns.id,
+          createdAt: schema.paymentRuns.createdAt,
+          totalPaise: schema.paymentRuns.totalPaise,
+          kind: schema.paymentRuns.kind,
+          parentRunId: schema.paymentRuns.parentRunId,
+          status: schema.paymentRuns.status,
+          creatorName: schema.users.name,
+        })
         .from(schema.paymentRuns)
+        .leftJoin(schema.users, eq(schema.paymentRuns.createdBy, schema.users.id))
         .where(eq(schema.paymentRuns.id, id))
         .limit(1);
 
-      if (!run) {
+      if (!runRow) {
         return reply.status(404).send({ error: "Payment run not found" });
       }
 
       const items = await db
         .select({
           id: schema.paymentItems.id,
-          runId: schema.paymentItems.runId,
           memberId: schema.paymentItems.memberId,
           purchaseIds: schema.paymentItems.purchaseIds,
           amountPaise: schema.paymentItems.amountPaise,
@@ -137,9 +168,6 @@ export async function paymentsRoutes(app: FastifyInstance) {
           retriedByItemId: schema.paymentItems.retriedByItemId,
           createdAt: schema.paymentItems.createdAt,
           memberName: schema.members.name,
-          memberCode: schema.members.farmerCode,
-          village: schema.members.village,
-          mobile: schema.members.mobile,
           ifsc: schema.members.ifsc,
         })
         .from(schema.paymentItems)
@@ -147,7 +175,62 @@ export async function paymentsRoutes(app: FastifyInstance) {
         .where(eq(schema.paymentItems.runId, id))
         .orderBy(schema.paymentItems.createdAt);
 
-      return reply.send({ run, items });
+      // Slip numbers and the masked account come from the underlying
+      // purchases' immutable snapshots (§12): the ledger mirrors the file.
+      const allPurchaseIds = items.flatMap((i: any) => i.purchaseIds);
+      const purchases = await db
+        .select({
+          id: schema.purchases.id,
+          slipNo: schema.purchases.slipNo,
+          memberSnapshotJson: schema.purchases.memberSnapshotJson,
+        })
+        .from(schema.purchases)
+        .where(inArray(schema.purchases.id, allPurchaseIds));
+      const slipById = new Map(purchases.map((p: any) => [p.id, p.slipNo]));
+
+      const run = {
+        id: runRow.id,
+        kind: runRow.kind === "retry" ? "retry" : "standard",
+        parentRunId: runRow.parentRunId,
+        totalFarmers: items.length,
+        totalAmountPaise: runRow.totalPaise,
+        status: runRow.status,
+        createdByName: runRow.creatorName ?? "कार्यालय",
+        createdAt: runRow.createdAt,
+      };
+
+      const formattedItems = items.map((item: any) => {
+        const slipNumbers = item.purchaseIds
+          .map((pid: string) => slipById.get(pid))
+          .filter((s: any): s is string => Boolean(s));
+
+        let accountMasked = "—";
+        const firstPurchase = purchases.find((p: any) => item.purchaseIds.includes(p.id));
+        if (firstPurchase) {
+          try {
+            const snap = JSON.parse(decryptBank(firstPurchase.memberSnapshotJson));
+            const raw = snap.bankAccount || snap.accountNumber || "";
+            if (raw) accountMasked = maskBankAccount(raw);
+          } catch {}
+        }
+
+        return {
+          id: item.id,
+          farmerName: item.memberName ?? "Farmer",
+          accountMasked,
+          ifsc: item.ifsc ?? "",
+          amountPaise: item.amountPaise,
+          amountRupees: item.amountPaise / 100,
+          slipNumbers,
+          status: item.status,
+          bankRef: item.bankRef,
+          failureReason: null,
+          retryOfItemId: item.retryOfItemId,
+          retriedByItemId: item.retriedByItemId,
+        };
+      });
+
+      return reply.send({ run, items: formattedItems });
     }
   );
 
@@ -181,7 +264,9 @@ export async function paymentsRoutes(app: FastifyInstance) {
         });
       }
 
-      // 2. Validate member snapshot and filter verified bank accounts
+      // 2. Validate member snapshot and filter verified bank accounts.
+      // No silent fallbacks: a purchase whose snapshot cannot be decrypted or
+      // whose bank details are missing is SKIPPED and reported (§12 honesty).
       interface GroupedFarmerItem {
         memberId: string;
         beneficiaryName: string;
@@ -192,17 +277,28 @@ export async function paymentsRoutes(app: FastifyInstance) {
       }
 
       const groupedByMember = new Map<string, GroupedFarmerItem>();
+      const skippedPurchases: Array<{ purchaseId: string; slipNo: string; reason: string }> = [];
 
       for (const p of candidatePurchases) {
         let snapshot: any;
         try {
           snapshot = JSON.parse(decryptBank(p.memberSnapshotJson));
         } catch {
+          skippedPurchases.push({
+            purchaseId: p.id,
+            slipNo: p.slipNo,
+            reason: "SNAPSHOT_DECRYPT_FAILED",
+          });
           continue;
         }
 
         // Only include purchases whose snapshot shows bankVerified is true
         if (!snapshot?.bankVerified) {
+          skippedPurchases.push({
+            purchaseId: p.id,
+            slipNo: p.slipNo,
+            reason: "BANK_NOT_VERIFIED",
+          });
           continue;
         }
 
@@ -211,8 +307,17 @@ export async function paymentsRoutes(app: FastifyInstance) {
         try {
           rawAccount = decryptBank(snapshot.bankAccountEnc || "");
         } catch {
-          // If bankAccountEnc was decrypted before snapshotting
-          rawAccount = snapshot.bankAccount || snapshot.accountNumber || "912345678901";
+          rawAccount = snapshot.bankAccount || snapshot.accountNumber || "";
+        }
+
+        const ifsc = snapshot.ifsc || "";
+        if (!rawAccount || !ifsc) {
+          skippedPurchases.push({
+            purchaseId: p.id,
+            slipNo: p.slipNo,
+            reason: "BANK_DETAILS_MISSING",
+          });
+          continue;
         }
 
         if (!groupedByMember.has(p.memberId)) {
@@ -220,7 +325,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
             memberId: p.memberId,
             beneficiaryName: snapshot.name || "Farmer",
             accountNumber: rawAccount,
-            ifsc: snapshot.ifsc || "MAHB0000123",
+            ifsc,
             purchases: [],
             totalAmountPaise: 0,
           });
@@ -284,6 +389,9 @@ export async function paymentsRoutes(app: FastifyInstance) {
         createdBy: userId,
         totalPaise: calculatedTotalPaise,
         fileKey,
+        // The generated CSV is stored verbatim (§12): later downloads serve
+        // exactly these bytes, so the file can never silently change.
+        fileContent: csvContent,
         kind: "original",
         status: "created",
       });
@@ -304,11 +412,12 @@ export async function paymentsRoutes(app: FastifyInstance) {
         });
       }
 
-      // Mark included purchases as 'paid'
+      // Mark included purchases as 'in_payment' — they are NOT paid yet.
+      // They only become 'paid' when the bank confirms success on their item.
       const includedIds = includedPurchases.map((p: any) => p.id);
       await db
         .update(schema.purchases)
-        .set({ status: "paid" })
+        .set({ status: "in_payment" })
         .where(inArray(schema.purchases.id, includedIds));
 
       // Record Audit Log
@@ -326,6 +435,10 @@ export async function paymentsRoutes(app: FastifyInstance) {
         purchaseCount: includedIds.length,
         fileKey,
         csvPreview: csvContent.slice(0, 300),
+        skippedPurchases,
+        // Web UI contract aliases (§12): the runs panel reads these names.
+        totalFarmers: runLines.length,
+        totalAmountPaise: calculatedTotalPaise,
       });
     }
   );
@@ -347,7 +460,15 @@ export async function paymentsRoutes(app: FastifyInstance) {
         return reply.status(404).send({ error: "Payment run not found" });
       }
 
-      // Re-generate file from items and member snapshots
+      // Serve the stored, immutable file bytes (§12). Runs created before the
+      // file_content column existed fall back to regeneration.
+      if (run.fileContent) {
+        reply.header("Content-Type", "text/csv; charset=utf-8");
+        reply.header("Content-Disposition", `attachment; filename="payment-run-${run.id}.csv"`);
+        return reply.send(run.fileContent);
+      }
+
+      // Legacy fallback: regenerate from items and member snapshots
       const items = await db
         .select()
         .from(schema.paymentItems)
@@ -422,16 +543,56 @@ export async function paymentsRoutes(app: FastifyInstance) {
         return reply.status(404).send({ error: "Payment run not found" });
       }
 
-      const items = await db
+      const items = (await db
         .select()
         .from(schema.paymentItems)
-        .where(eq(schema.paymentItems.runId, id));
+        .where(eq(schema.paymentItems.runId, id))) as Array<
+        typeof schema.paymentItems.$inferSelect
+      >;
 
       if (items.length === 0) {
         return reply.status(400).send({ error: "Run has no payment items" });
       }
 
       const { itemStatuses, simulateAllSuccess, simulateOneFailureIndex } = parsed.data;
+
+      const itemsById = new Map(items.map((itm) => [itm.id, itm]));
+
+      // Validate ownership: every supplied itemId must belong to THIS run.
+      // Cross-run updates would silently corrupt another run's items (§12).
+      if (itemStatuses && itemStatuses.length > 0) {
+        const foreignIds = itemStatuses
+          .map((s) => s.itemId)
+          .filter((itemId) => !itemsById.has(itemId));
+        if (foreignIds.length > 0) {
+          return reply.status(400).send({
+            error: "ITEM_NOT_IN_RUN",
+            message: `Item ids do not belong to run ${id}: ${foreignIds.join(", ")}`,
+          });
+        }
+      }
+
+      // Purchases follow the item's confirmed bank status: success => paid,
+      // failed (not yet retried) => back to approved so a retry run can
+      // include them. No item is marked paid before the bank confirms.
+      const applyPurchaseStatus = async (
+        itemId: string,
+        newStatus: "queued" | "sent" | "success" | "failed"
+      ) => {
+        const itm = itemsById.get(itemId);
+        if (!itm) return;
+        if (newStatus === "success") {
+          await db
+            .update(schema.purchases)
+            .set({ status: "paid" })
+            .where(inArray(schema.purchases.id, itm.purchaseIds));
+        } else if (newStatus === "failed" && !itm.retriedByItemId) {
+          await db
+            .update(schema.purchases)
+            .set({ status: "approved" })
+            .where(inArray(schema.purchases.id, itm.purchaseIds));
+        }
+      };
 
       if (simulateAllSuccess) {
         for (const itm of items) {
@@ -442,6 +603,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
               bankRef: itm.bankRef || `UTR-${crypto.randomUUID().slice(0, 10).toUpperCase()}`,
             })
             .where(eq(schema.paymentItems.id, itm.id));
+          await applyPurchaseStatus(itm.id, "success");
         }
       } else if (simulateOneFailureIndex !== undefined) {
         for (let i = 0; i < items.length; i++) {
@@ -454,6 +616,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
               bankRef: newStatus === "failed" ? "BANK-ERR-INVALID-IFSC" : `UTR-${crypto.randomUUID().slice(0, 10).toUpperCase()}`,
             })
             .where(eq(schema.paymentItems.id, itm.id));
+          await applyPurchaseStatus(itm.id, newStatus);
         }
       } else if (itemStatuses && itemStatuses.length > 0) {
         for (const statusUpdate of itemStatuses) {
@@ -464,6 +627,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
               bankRef: statusUpdate.bankRef ?? undefined,
             })
             .where(eq(schema.paymentItems.id, statusUpdate.itemId));
+          await applyPurchaseStatus(statusUpdate.itemId, statusUpdate.status);
         }
       }
 
@@ -522,12 +686,15 @@ export async function paymentsRoutes(app: FastifyInstance) {
       const fileKey = `payment_files/${retryRunId}.csv`;
       let retryTotalPaise = 0;
       const retryLines: BankPaymentLine[] = [];
+      // Keep item↔line pairs aligned so a skipped item never shifts the file.
+      const includedItems: Array<{ item: typeof failedItems[number]; line: BankPaymentLine }> = [];
+      const skippedItems: Array<{ itemId: string; reason: string }> = [];
       let serial = 1;
 
       for (const item of failedItems) {
-        retryTotalPaise += item.amountPaise;
-
-        // Fetch original member snapshot from underlying purchases
+        // Fetch original member snapshot from underlying purchases.
+        // No silent fallbacks: an item whose snapshot cannot be decrypted is
+        // skipped from the retry file and reported (§12 honesty).
         const [purchase] = await db
           .select({
             memberSnapshotJson: schema.purchases.memberSnapshotJson,
@@ -536,20 +703,27 @@ export async function paymentsRoutes(app: FastifyInstance) {
           .where(inArray(schema.purchases.id, item.purchaseIds))
           .limit(1);
 
-        let beneficiaryName = "Farmer";
-        let accountNumber = "912345678901";
-        let ifsc = "MAHB0000123";
+        let beneficiaryName = "";
+        let accountNumber = "";
+        let ifsc = "";
 
         if (purchase) {
           try {
             const snap = JSON.parse(decryptBank(purchase.memberSnapshotJson));
-            beneficiaryName = snap.name || beneficiaryName;
-            ifsc = snap.ifsc || ifsc;
-            accountNumber = snap.accountNumber || snap.bankAccount || accountNumber;
+            beneficiaryName = snap.name || "";
+            ifsc = snap.ifsc || "";
+            accountNumber = snap.accountNumber || snap.bankAccount || "";
           } catch {}
         }
 
-        retryLines.push({
+        if (!accountNumber || !ifsc) {
+          skippedItems.push({ itemId: item.id, reason: "BANK_DETAILS_MISSING" });
+          continue;
+        }
+
+        retryTotalPaise += item.amountPaise;
+
+        const line: BankPaymentLine = {
           serial: serial++,
           beneficiaryName,
           accountNumber,
@@ -558,11 +732,21 @@ export async function paymentsRoutes(app: FastifyInstance) {
           amountFormatted: (item.amountPaise / 100).toFixed(2),
           narration: `Retry of run ${id.slice(0, 6)}`,
           paymentReference: `RETRY-${retryRunId.slice(0, 6)}-${String(serial).padStart(3, "0")}`,
+        };
+        retryLines.push(line);
+        includedItems.push({ item, line });
+      }
+
+      if (includedItems.length === 0) {
+        return reply.status(400).send({
+          error: "NO_RETRYABLE_ITEMS",
+          message: "Failed items could not be retried (bank details missing from snapshots)",
+          skippedItems,
         });
       }
 
-      // Code Assertion (§12): Total of retry run must equal sum of failed items
-      const expectedFailedTotal = failedItems.reduce((acc: number, itm: any) => acc + itm.amountPaise, 0);
+      // Code Assertion (§12): Total of retry run must equal sum of included failed items
+      const expectedFailedTotal = includedItems.reduce((acc: number, entry: any) => acc + entry.item.amountPaise, 0);
       if (retryTotalPaise !== expectedFailedTotal) {
         throw new Error(
           `Reconciliation failure on retry: ${retryTotalPaise} != ${expectedFailedTotal}`
@@ -571,21 +755,31 @@ export async function paymentsRoutes(app: FastifyInstance) {
 
       const userId = req.user?.id || "user-office-1";
 
+      // Generate the retry CSV and store it verbatim (§12).
+      const retryCsv = bankFileWriter.generateCsv(retryLines);
+
       // Insert new run with kind = 'retry', parentRunId = originalRun.id
       await db.insert(schema.paymentRuns).values({
         id: retryRunId,
         createdBy: userId,
         totalPaise: retryTotalPaise,
         fileKey,
+        fileContent: retryCsv,
         kind: "retry",
         parentRunId: originalRun.id,
         status: "created",
       });
 
+      // The retried purchases re-enter the payment pipeline.
+      for (const entry of includedItems) {
+        await db
+          .update(schema.purchases)
+          .set({ status: "in_payment" })
+          .where(inArray(schema.purchases.id, entry.item.purchaseIds));
+      }
+
       // Insert new items starting at 'queued', link retryOfItemId, and link retriedByItemId on original items
-      for (let i = 0; i < failedItems.length; i++) {
-        const origItem = failedItems[i];
-        const line = retryLines[i];
+      for (const { item: origItem, line } of includedItems) {
         const newItemId = `item-${crypto.randomUUID().slice(0, 8)}`;
 
         await db.insert(schema.paymentItems).values({
@@ -616,10 +810,12 @@ export async function paymentsRoutes(app: FastifyInstance) {
       return reply.status(201).send({
         success: true,
         newRunId: retryRunId,
+        retryRunId,
         parentRunId: originalRun.id,
         totalPaise: retryTotalPaise,
-        itemCount: failedItems.length,
+        itemCount: includedItems.length,
         fileKey,
+        skippedItems,
       });
     }
   );

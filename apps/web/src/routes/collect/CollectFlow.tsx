@@ -18,6 +18,7 @@ import { StepShell } from "../../ui/StepShell.js";
 import { Numpad } from "../../ui/Numpad.js";
 import { Slip, SlipProps } from "../../ui/Slip.js";
 import { Button } from "../../ui/Button.js";
+import { t } from "../../i18n/mr.js";
 
 export function CollectFlow() {
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -32,8 +33,13 @@ export function CollectFlow() {
   const [activeInput, setActiveInput] = useState<"gross" | "tare" | "moisture">("gross");
 
   // Photos & AI Photo Reading (§10.2)
-  const [scalePhotoAttached, setScalePhotoAttached] = useState<boolean>(false);
+  const [scalePhotoData, setScalePhotoData] = useState<string | null>(null);
+  const [scaleAiReading, setScaleAiReading] = useState<DisplayReading | null>(null);
+  const [scaleMismatchConfirmed, setScaleMismatchConfirmed] = useState<boolean>(false);
+  const [scalePhotoNotice, setScalePhotoNotice] = useState<string | null>(null);
+  const [scalePhotoId, setScalePhotoId] = useState<string | null>(null);
   const [meterPhotoData, setMeterPhotoData] = useState<string | null>(null);
+  const [meterPhotoId, setMeterPhotoId] = useState<string | null>(null);
   const [aiReading, setAiReading] = useState<DisplayReading | null>(null);
   const [isReadingPhoto, setIsReadingPhoto] = useState<boolean>(false);
   const [photoNotice, setPhotoNotice] = useState<string | null>(null);
@@ -151,14 +157,36 @@ export function CollectFlow() {
         moistureX10: moistureTenths,
         ratePaise,
         priceVersion,
-        centreCode: "C07",
+        // Centre identity comes from the verified login record in Dexie meta.
+        photoIds: [meterPhotoId, scalePhotoId].filter(
+          (id): id is string => typeof id === "string"
+        ),
       });
 
-      // 2. Render slip immediately
+      // 2. Stamp final typed values onto the queued photos so the review
+      // queue sees exactly what the operator confirmed (§10.2).
+      if (meterPhotoId) {
+        await db.photos.update(meterPhotoId, {
+          typedValueX10: moistureTenths,
+          matched:
+            aiReading?.valueX10 != null ? aiReading.valueX10 === moistureTenths : false,
+        });
+      }
+      if (scalePhotoId) {
+        await db.photos.update(scalePhotoId, {
+          typedValueX10: grossTenths,
+          matched:
+            scaleAiReading?.valueX10 != null
+              ? scaleAiReading.valueX10 === grossTenths
+              : false,
+        });
+      }
+
+      // 3. Render slip immediately
       setCreatedSlip(slip);
       setStep(5);
 
-      // 3. If online, trigger background sync
+      // 4. If online, trigger background sync
       if (typeof navigator !== "undefined" && navigator.onLine) {
         syncPurchases()
           .then((syncRes) => {
@@ -179,7 +207,8 @@ export function CollectFlow() {
     }
   };
 
-  // Photo capture and AI LCD reading (§10.2)
+  // Photo capture and AI LCD reading (§10.2). The photo is ALWAYS queued in
+  // Dexie (with the AI reading when available) so it uploads after sync.
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -191,6 +220,8 @@ export function CollectFlow() {
 
       const base64 = await resizeImage(file, 1200);
       setMeterPhotoData(base64);
+      const photoId = `photo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setMeterPhotoId(photoId);
 
       if (navigator.onLine) {
         try {
@@ -199,12 +230,22 @@ export function CollectFlow() {
           if (reading.value !== null && Number.isFinite(reading.value)) {
             setMoistureInput(reading.value.toFixed(1));
           }
+          await queuePhotoOffline({
+            id: photoId,
+            kind: "meter",
+            imageData: base64,
+            aiValueX10: reading.valueX10,
+            typedValueX10:
+              reading.valueX10 ?? Math.round(parseFloat(moistureInput) * 10),
+            matched: reading.valueX10 === moistureTenths,
+            aiNote: reading.note,
+          });
         } catch (serverErr: any) {
           console.warn("Server vision read failed, fallback to manual numpad:", serverErr);
           setPhotoNotice("सर्व्हरवरून वाचन अशक्य. मॅन्युअल कीपॅड वापरा. फोटो साठवला गेला आहे.");
           setMismatchConfirmed(true);
           await queuePhotoOffline({
-            id: `photo-${Date.now()}`,
+            id: photoId,
             kind: "meter",
             imageData: base64,
             typedValueX10: moistureTenths,
@@ -216,7 +257,7 @@ export function CollectFlow() {
         setPhotoNotice("ऑफलाइन मोड: फोटो साठवला आहे, नेटवर्क आल्यावर सर्व्हरवर पाठवला जाईल.");
         setMismatchConfirmed(true);
         await queuePhotoOffline({
-          id: `photo-${Date.now()}`,
+          id: photoId,
           kind: "meter",
           imageData: base64,
           typedValueX10: moistureTenths,
@@ -234,13 +275,85 @@ export function CollectFlow() {
     }
   };
 
+  // Scale photo capture with AI reading + gross weight prefill (§8, §10.2).
+  const handleScalePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsReadingPhoto(true);
+      setScalePhotoNotice(null);
+      setScaleMismatchConfirmed(false);
+
+      const base64 = await resizeImage(file, 1200);
+      setScalePhotoData(base64);
+      const photoId = `photo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setScalePhotoId(photoId);
+
+      if (navigator.onLine) {
+        try {
+          const reading = await requestPhotoReading(base64, "scale");
+          setScaleAiReading(reading);
+          if (reading.value !== null && Number.isFinite(reading.value)) {
+            setGrossInput(reading.value.toFixed(1));
+          }
+          await queuePhotoOffline({
+            id: photoId,
+            kind: "scale",
+            imageData: base64,
+            aiValueX10: reading.valueX10,
+            typedValueX10:
+              reading.valueX10 ?? Math.round(parseFloat(grossInput) * 10),
+            matched: reading.valueX10 === grossTenths,
+            aiNote: reading.note,
+          });
+        } catch (serverErr: any) {
+          console.warn("Server scale read failed, fallback to manual numpad:", serverErr);
+          setScalePhotoNotice("सर्व्हरवरून वाचन अशक्य. मॅन्युअल कीपॅड वापरा. फोटो साठवला गेला आहे.");
+          setScaleMismatchConfirmed(true);
+          await queuePhotoOffline({
+            id: photoId,
+            kind: "scale",
+            imageData: base64,
+            typedValueX10: grossTenths,
+            matched: false,
+            aiNote: "Fallback to offline manual input",
+          });
+        }
+      } else {
+        setScalePhotoNotice("ऑफलाइन मोड: फोटो साठवला आहे, नेटवर्क आल्यावर सर्व्हरवर पाठवला जाईल.");
+        setScaleMismatchConfirmed(true);
+        await queuePhotoOffline({
+          id: photoId,
+          kind: "scale",
+          imageData: base64,
+          typedValueX10: grossTenths,
+          matched: false,
+          aiNote: "Captured offline",
+        });
+      }
+    } catch (err: any) {
+      console.warn("Failed to process scale photo:", err);
+      setScalePhotoNotice("फोटो प्रक्रिया करताना त्रुटी. मॅन्युअल इनपुट सुरू ठेवा.");
+      setScaleMismatchConfirmed(true);
+    } finally {
+      setIsReadingPhoto(false);
+      e.target.value = "";
+    }
+  };
+
   const handleReset = () => {
     setSelectedMember(null);
     setGrossInput("1250.0");
     setTareInput("18.0");
     setMoistureInput("11.5");
-    setScalePhotoAttached(false);
+    setScalePhotoData(null);
+    setScaleAiReading(null);
+    setScaleMismatchConfirmed(false);
+    setScalePhotoNotice(null);
+    setScalePhotoId(null);
     setMeterPhotoData(null);
+    setMeterPhotoId(null);
     setAiReading(null);
     setIsReadingPhoto(false);
     setPhotoNotice(null);
@@ -279,7 +392,7 @@ export function CollectFlow() {
       <StepShell
         stepCurrent={1}
         stepTotal={4}
-        title="सभासद निवडा"
+        title={t("collect.step1Title")}
         isOnline={isOnline}
         priceDate={`RATE VERSION: v${priceVersion}`}
       >
@@ -391,11 +504,18 @@ export function CollectFlow() {
   // STEP 2: CROP & WEIGHTS (§13.2)
   // -------------------------------------------------------------------------
   if (step === 2) {
+    const hasScaleMismatch =
+      scaleAiReading?.valueX10 !== null &&
+      scaleAiReading?.valueX10 !== undefined &&
+      grossTenths !== scaleAiReading.valueX10;
+
+    const isBlockedByScaleMismatch = hasScaleMismatch && !scaleMismatchConfirmed;
+
     return (
       <StepShell
         stepCurrent={2}
         stepTotal={4}
-        title="पीक आणि वजन"
+        title={t("collect.step2Title")}
         isOnline={isOnline}
         onBack={() => setStep(1)}
       >
@@ -498,29 +618,119 @@ export function CollectFlow() {
             </span>
           </div>
 
-          {/* Scale Photo Placeholder (§13.2) */}
-          <div className="flex justify-between items-center bg-chaos-paper p-3 border-2 border-chaos-black">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-black">
-              [ 📷 काटा फोटो (SCALE PHOTO) ]
-            </span>
-            <button
-              type="button"
-              onClick={() => setScalePhotoAttached(!scalePhotoAttached)}
-              className={`font-mono text-xs px-3 py-1.5 border-2 font-bold uppercase tracking-wider transition-all ${
-                scalePhotoAttached
-                  ? "bg-chaos-black text-chaos-orange border-chaos-black"
-                  : "bg-chaos-canvas text-chaos-black border-chaos-black hover:bg-white"
-              }`}
-            >
-              {scalePhotoAttached ? "PHOTO ATTACHED ✓" : "CAPTURE PHOTO"}
-            </button>
+          {/* Scale Photo Capture & AI Reading (§8, §10.2) */}
+          <div className="bg-chaos-paper border-2 border-chaos-black p-3.5 flex flex-col gap-3">
+            <div className="flex justify-between items-center">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-black">
+                📷 काटा डिस्प्ले फोटो (SCALE PHOTO):
+              </span>
+              <label
+                htmlFor="scale-photo-input"
+                className="cursor-pointer bg-chaos-canvas border-2 border-chaos-black text-chaos-black font-mono text-xs font-bold uppercase tracking-wider px-3 py-1.5 shadow-tactile-sm hover:bg-chaos-black hover:text-white transition-all"
+              >
+                {scalePhotoData ? "CHANGE PHOTO" : "CAPTURE PHOTO"}
+              </label>
+              <input
+                id="scale-photo-input"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleScalePhotoCapture}
+              />
+            </div>
+
+            {isReadingPhoto && (
+              <div className="font-mono text-xs text-chaos-orange font-bold bg-chaos-black p-2.5 flex items-center gap-2 border border-chaos-black">
+                <span className="animate-spin inline-block">⏳</span> AI OCR SCALE READING IN PROGRESS...
+              </div>
+            )}
+
+            {scalePhotoData && !isReadingPhoto && (
+              <div className="flex items-center gap-3 bg-white p-2 border-2 border-chaos-black">
+                <img
+                  src={scalePhotoData}
+                  alt="Scale display"
+                  className="w-16 h-12 object-cover border border-chaos-black"
+                />
+                <div className="font-mono text-xs">
+                  {scaleAiReading?.value !== null && scaleAiReading?.value !== undefined ? (
+                    <div>
+                      <span className="font-bold text-emerald-800">
+                        AI OCR READ: {scaleAiReading.value} KG
+                      </span>{" "}
+                      <span className="text-chaos-muted">
+                        [{scaleAiReading.confidence === "high" ? "HIGH CONFIDENCE" : "MEDIUM"}]
+                      </span>
+                      {scaleAiReading.note && (
+                        <span className="block text-chaos-muted text-[10px] mt-0.5">{scaleAiReading.note}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-chaos-muted">PHOTO STORED FOR SYNC</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {scalePhotoNotice && (
+              <div className="font-mono text-xs bg-chaos-canvas border border-chaos-black p-2 text-chaos-black font-medium">
+                [i] {scalePhotoNotice}
+              </div>
+            )}
           </div>
+
+          {/* Scale Photo Mismatch Block (§10.2: blocks Next until resolved) */}
+          {hasScaleMismatch && !scaleMismatchConfirmed && (
+            <div
+              data-testid="scale-mismatch-block"
+              className="bg-amber-50 border-2 border-chaos-orange p-4 shadow-tactile-orange flex flex-col gap-2.5"
+            >
+              <div className="flex items-center gap-2 text-amber-950 font-mono font-black text-xs uppercase tracking-wider">
+                <span>⚠️</span>
+                <span>काटा वाचन विसंगती // SCALE READING MISMATCH</span>
+              </div>
+              <p className="font-sans text-xs text-stone-800 font-medium">
+                AI ने काट्यावरून वाचलेले वजन <b>{(scaleAiReading!.valueX10! / 10).toFixed(1)} KG</b> आहे आणि आपण टाइप केलेले वजन <b>{(grossTenths / 10).toFixed(1)} KG</b> आहे. पुढे जाण्यासाठी खालीलपैकी एक पर्याय निवडा:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                <button
+                  type="button"
+                  data-testid="btn-use-scale-ai"
+                  onClick={() => {
+                    setGrossInput((scaleAiReading!.valueX10! / 10).toFixed(1));
+                    setScaleMismatchConfirmed(true);
+                  }}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-mono text-xs font-bold py-2.5 px-3 uppercase border-2 border-chaos-black shadow-tactile-sm transition-all"
+                >
+                  ✓ USE AI ({(scaleAiReading!.valueX10! / 10).toFixed(1)} KG)
+                </button>
+                <button
+                  type="button"
+                  data-testid="btn-confirm-scale-typed"
+                  onClick={() => setScaleMismatchConfirmed(true)}
+                  className="bg-chaos-black hover:bg-stone-800 text-white font-mono text-xs font-bold py-2.5 px-3 uppercase border-2 border-chaos-black shadow-tactile-sm transition-all"
+                >
+                  ✓ USE TYPED ({(grossTenths / 10).toFixed(1)} KG)
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Numpad */}
           <Numpad
-            onDigit={handleDigit}
-            onClear={handleClear}
-            onBackspace={handleBackspace}
+            onDigit={(d) => {
+              handleDigit(d);
+              setScaleMismatchConfirmed(false);
+            }}
+            onClear={() => {
+              handleClear();
+              setScaleMismatchConfirmed(false);
+            }}
+            onBackspace={() => {
+              handleBackspace();
+              setScaleMismatchConfirmed(false);
+            }}
           />
 
           {mathError && (
@@ -529,17 +739,19 @@ export function CollectFlow() {
             </div>
           )}
 
-          {/* Next Button */}
+          {/* Next Button - Blocked when scale mismatch is unresolved (§10.2) */}
           <Button
             variant="orange"
-            disabled={grossTenths <= 0 || tareTenths >= grossTenths}
+            disabled={grossTenths <= 0 || tareTenths >= grossTenths || isBlockedByScaleMismatch}
             onClick={() => {
               setActiveInput("moisture");
               setStep(3);
             }}
             className="w-full text-base py-3.5 shadow-tactile"
           >
-            पुढे जा // NEXT: MOISTURE →
+            {isBlockedByScaleMismatch
+              ? "⚠️ विसंगती निश्चित करा // RESOLVE MISMATCH"
+              : "पुढे जा // NEXT: MOISTURE →"}
           </Button>
         </div>
       </StepShell>
@@ -564,7 +776,7 @@ export function CollectFlow() {
       <StepShell
         stepCurrent={3}
         stepTotal={4}
-        title="ओलावा तपासणी"
+        title={t("collect.step3Title")}
         isOnline={isOnline}
         onBack={() => {
           setActiveInput("gross");
@@ -762,7 +974,7 @@ export function CollectFlow() {
     <StepShell
       stepCurrent={4}
       stepTotal={4}
-      title="तपशील पडताळणी"
+      title={t("collect.step4Title")}
       isOnline={isOnline}
       onBack={() => setStep(3)}
     >

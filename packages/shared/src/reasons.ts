@@ -6,6 +6,7 @@ export const SyncRejectionReason = {
   CALCULATION_MISMATCH: "CALCULATION_MISMATCH",
   RATE_MISMATCH: "RATE_MISMATCH",
   DEVICE_REVOKED: "DEVICE_REVOKED",
+  MEMBER_NOT_FOUND: "MEMBER_NOT_FOUND",
 } as const;
 
 export type SyncRejectionReasonType =
@@ -31,6 +32,7 @@ export const SYNC_REASON_LABELS_MR: Record<string, string> = {
   CALCULATION_MISMATCH: "वजन किंवा रक्कम हिशोबात फरक",
   RATE_MISMATCH: "दर विसंगती (अधिकृत दराशी जुळत नाही)",
   DEVICE_REVOKED: "हे साधन रद्द करण्यात आले आहे",
+  MEMBER_NOT_FOUND: "सभासद सापडला नाही (सभासद अस्तित्वात नाही)",
   STALE_PRICE_VERSION: "जुन्या दरानुसार नोंद (पुनरावलोकन प्रलंबित)",
   DUPLICATE_FARMER: "एकाच दिवशी एकाच शेतकऱ्याची दुबार नोंद",
   YIELD_HIGH: "जमिनीच्या क्षमतेपेक्षा जास्त उत्पन्न (संशयास्पद)",

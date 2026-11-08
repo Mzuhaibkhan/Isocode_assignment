@@ -46,6 +46,7 @@ export const members = pgTable("members", {
   name: text("name").notNull(),
   nameLatin: text("name_latin"),
   village: text("village").notNull(),
+  centreId: text("centre_id").references(() => centres.id),
   landTenthsAcre: integer("land_tenths_acre").notNull(),
   mobile: text("mobile").notNull(),
   bankAccountEnc: text("bank_account_enc").notNull(),
@@ -99,7 +100,7 @@ export const purchases = pgTable(
     correctsId: uuid("corrects_id"),
     clientTime: timestamp("client_time", { withTimezone: true }).notNull(),
     serverReceivedAt: timestamp("server_received_at", { withTimezone: true }).defaultNow().notNull(),
-    status: text("status").notNull(), // 'accepted' | 'held' | 'approved' | 'paid'
+    status: text("status").notNull(), // 'accepted' | 'held' | 'approved' | 'in_payment' | 'paid'
     flagCodes: text("flag_codes").array(),
   },
   (table) => [
@@ -118,6 +119,7 @@ export const purchasePhotos = pgTable("purchase_photos", {
   typedValueX10: integer("typed_value_x10").notNull(),
   matched: boolean("matched").notNull(),
   aiNote: text("ai_note"),
+  imageData: text("image_data"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -136,6 +138,7 @@ export const paymentRuns = pgTable("payment_runs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   totalPaise: integer("total_paise").notNull(),
   fileKey: text("file_key").notNull(),
+  fileContent: text("file_content"),
   kind: text("kind").default("original").notNull(), // 'original' | 'retry'
   parentRunId: text("parent_run_id"),
   status: text("status").default("created").notNull(),

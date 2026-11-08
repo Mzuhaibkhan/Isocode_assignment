@@ -6,10 +6,11 @@ export async function recordAudit(
   action: string,
   entity: string,
   entityId: string,
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>,
+  executor: any = db
 ) {
   try {
-    await db.insert(schema.auditLog).values({
+    await executor.insert(schema.auditLog).values({
       id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       actorId,
       action,

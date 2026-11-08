@@ -1,6 +1,7 @@
 import pg from "pg";
 import { config } from "../config.js";
 import * as schema from "./schema.js";
+import { runSeed } from "./seed.js";
 
 const { Pool } = pg;
 
@@ -18,10 +19,14 @@ if (process.env.NODE_ENV === "test") {
   dbInstance = drizzle(pgliteClient, { schema });
   poolInstance = pgliteClient;
 
-  // Execute generated migration to build all tables
-  const migrationPath = path.resolve(process.cwd(), "src/db/migrations/0000_stormy_exodus.sql");
-  if (fs.existsSync(migrationPath)) {
-    const sqlContent = fs.readFileSync(migrationPath, "utf-8");
+  // Execute all generated migrations in order to build every table and column
+  const migrationsDir = path.resolve(process.cwd(), "src/db/migrations");
+  const migrationFiles = fs.existsSync(migrationsDir)
+    ? fs.readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort()
+    : [];
+
+  for (const file of migrationFiles) {
+    const sqlContent = fs.readFileSync(path.join(migrationsDir, file), "utf-8");
     const statements = sqlContent
       .split("--> statement-breakpoint")
       .map((s) => s.trim())
@@ -31,14 +36,17 @@ if (process.env.NODE_ENV === "test") {
       await pgliteClient.exec(stmt);
     }
   }
-
-  // Seed the test database
-  const { runSeed } = await import("./seed.js");
-  await runSeed(dbInstance);
 } else {
   poolInstance = new Pool({ connectionString: config.DATABASE_URL });
   const { drizzle } = await import("drizzle-orm/node-postgres");
   dbInstance = drizzle(poolInstance, { schema });
+}
+
+// Seed the test database once the client is fully wired. runSeed is imported
+// statically (seed.ts imports this module back, so a dynamic import inside
+// the top-level await would deadlock the ESM loader).
+if (process.env.NODE_ENV === "test") {
+  await runSeed(dbInstance);
 }
 
 export const pool = poolInstance;

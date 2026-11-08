@@ -15,12 +15,14 @@ export interface SendSmsParams {
   slip: SlipDetails;
 }
 
-export async function sendSlipSms(params: SendSmsParams) {
+// Optional executor lets callers run the insert inside a shared db transaction
+// (e.g. the purchase accept in /sync/purchases).
+export async function sendSlipSms(params: SendSmsParams, executor: any = db) {
   const body = formatSlipText(params.slip);
   const id = `sms-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const toMobileMasked = maskMobile(params.mobile);
 
-  const [record] = await db
+  const [record] = await executor
     .insert(schema.smsLog)
     .values({
       id,

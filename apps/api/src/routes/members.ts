@@ -21,14 +21,23 @@ const MemberUpdateSchema = z.object({
 type MemberRow = typeof schema.members.$inferSelect;
 
 export async function membersRoutes(app: FastifyInstance) {
-  // GET /members - List members for local cache or UI
-  app.get("/members", async (req: FastifyRequest, reply: FastifyReply) => {
-    const { search } = req.query as { search?: string };
+  // GET /members - List members for local cache or UI.
+  // Office sees every member; an operator only sees their own centre's members.
+  app.get(
+    "/members",
+    { preHandler: requireAuth(["operator", "office_manager"]) },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const { search } = req.query as { search?: string };
 
-    const rows: MemberRow[] = await db
-      .select()
-      .from(schema.members)
-      .orderBy(desc(schema.members.createdAt));
+      const isOperator = req.user!.role === "operator";
+
+      const rows: MemberRow[] = await db
+        .select()
+        .from(schema.members)
+        .where(
+          isOperator ? eq(schema.members.centreId, req.user!.centreId ?? "") : undefined
+        )
+        .orderBy(desc(schema.members.createdAt));
 
     const formatted = rows
       .filter((m: MemberRow) => {
@@ -71,7 +80,8 @@ export async function membersRoutes(app: FastifyInstance) {
       });
 
     return reply.send({ members: formatted, count: formatted.length });
-  });
+    }
+  );
 
   // POST /members - Register new member (Office Manager only)
   app.post(

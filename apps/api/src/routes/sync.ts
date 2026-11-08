@@ -329,14 +329,14 @@ export async function syncRoutes(app: FastifyInstance) {
           id: `rej-${crypto.randomUUID().slice(0, 8)}`,
           deviceId,
           deviceSeq: entry.deviceSeq,
-          reason: "MEMBER_NOT_FOUND",
+          reason: SyncRejectionReason.MEMBER_NOT_FOUND,
           payloadHash: entry.entryHash,
         });
         results.push({
           id: entry.id,
           slipNo: entry.slipNo,
           status: "rejected",
-          reason: "MEMBER_NOT_FOUND",
+          reason: SyncRejectionReason.MEMBER_NOT_FOUND,
         });
         rejectedCount++;
         continue;
@@ -393,54 +393,67 @@ export async function syncRoutes(app: FastifyInstance) {
       };
       const memberSnapshotJson = encryptBank(JSON.stringify(snapshot));
 
-      // I. Save to DB (§9.7 step 8)
-      await db.insert(schema.purchases).values({
-        id: entry.id,
-        slipNo: entry.slipNo,
-        memberId: entry.memberId,
-        crop: entry.crop,
-        grade: entry.grade,
-        grossX10: entry.grossX10,
-        tareX10: entry.tareX10,
-        moistureX10: entry.moistureX10,
-        netX10: entry.netX10,
-        ratePaise: entry.ratePaise,
-        amountPaise: entry.amountPaise,
-        priceVersion: entry.priceVersion,
-        memberSnapshotJson,
-        deviceId: entry.deviceId,
-        deviceSeq: entry.deviceSeq,
-        prevHash: entry.prevHash,
-        entryHash: entry.entryHash,
-        signature: entry.signature,
-        correctsId: entry.correctsId ?? null,
-        clientTime: entryClientDate,
-        serverReceivedAt: serverNow,
-        status: entryStatus,
-        flagCodes: flagCodes.length > 0 ? flagCodes : null,
-      });
-
-      // J. Queue Marathi SMS (§9.7 step 11)
-      const cropLabelMarathi = entry.crop === "Soybean" ? "सोयाबीन" : entry.crop === "Tur" ? "तूर" : entry.crop;
-      await sendSlipSms({
-        purchaseId: entry.id,
-        mobile: member.mobile,
-        slip: {
+      // I. Save to DB (§9.7 step 8) — purchase, SMS log and audit commit
+      // atomically so a half-accepted entry can never exist.
+      await db.transaction(async (tx: any) => {
+        await tx.insert(schema.purchases).values({
+          id: entry.id,
           slipNo: entry.slipNo,
-          farmerName: member.name,
-          crop: cropLabelMarathi,
-          netKg: (entry.netX10 / 10).toFixed(1),
-          moisturePercent: (entry.moistureX10 / 10).toFixed(1),
-          ratePerQuintal: Math.floor(entry.ratePaise / 100),
-          amountFormatted: formatRupees(entry.amountPaise),
-        },
-      });
+          memberId: entry.memberId,
+          crop: entry.crop,
+          grade: entry.grade,
+          grossX10: entry.grossX10,
+          tareX10: entry.tareX10,
+          moistureX10: entry.moistureX10,
+          netX10: entry.netX10,
+          ratePaise: entry.ratePaise,
+          amountPaise: entry.amountPaise,
+          priceVersion: entry.priceVersion,
+          memberSnapshotJson,
+          deviceId: entry.deviceId,
+          deviceSeq: entry.deviceSeq,
+          prevHash: entry.prevHash,
+          entryHash: entry.entryHash,
+          signature: entry.signature,
+          correctsId: entry.correctsId ?? null,
+          clientTime: entryClientDate,
+          serverReceivedAt: serverNow,
+          status: entryStatus,
+          flagCodes: flagCodes.length > 0 ? flagCodes : null,
+        });
 
-      // K. Record Audit Log
-      await recordAudit(device.userId, "PURCHASE_SYNCED", "purchase", entry.id, {
-        slipNo: entry.slipNo,
-        status: entryStatus,
-        flagCodes,
+        // J. Queue Marathi SMS (§9.7 step 11)
+        const cropLabelMarathi = entry.crop === "Soybean" ? "सोयाबीन" : entry.crop === "Tur" ? "तूर" : entry.crop;
+        await sendSlipSms(
+          {
+            purchaseId: entry.id,
+            mobile: member.mobile,
+            slip: {
+              slipNo: entry.slipNo,
+              farmerName: member.name,
+              crop: cropLabelMarathi,
+              netKg: (entry.netX10 / 10).toFixed(1),
+              moisturePercent: (entry.moistureX10 / 10).toFixed(1),
+              ratePerQuintal: Math.floor(entry.ratePaise / 100),
+              amountFormatted: formatRupees(entry.amountPaise),
+            },
+          },
+          tx
+        );
+
+        // K. Record Audit Log
+        await recordAudit(
+          device.userId,
+          "PURCHASE_SYNCED",
+          "purchase",
+          entry.id,
+          {
+            slipNo: entry.slipNo,
+            status: entryStatus,
+            flagCodes,
+          },
+          tx
+        );
       });
 
       if (entryStatus === "held") {

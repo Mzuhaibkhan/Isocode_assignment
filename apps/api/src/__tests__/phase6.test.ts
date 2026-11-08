@@ -18,6 +18,7 @@ import {
 import { decryptBank } from "../crypto/aes.js";
 import { eq, desc } from "drizzle-orm";
 import crypto from "node:crypto";
+import { signedSession } from "./helpers/sessions.js";
 
 describe("Phase 6: Hardening, Polish, Centre Daily Summary & Full Acceptance Suite (§1, §13.3, §16, §19)", () => {
   let app: FastifyInstance;
@@ -26,13 +27,13 @@ describe("Phase 6: Hardening, Polish, Centre Daily Summary & Full Acceptance Sui
   const testDeviceId = "dev-p6-01";
   const centreId = "centre-c07";
 
-  const officeSession = JSON.stringify({
+  const officeSession = signedSession({
     id: "user-office-1",
     role: "office_manager",
     name: "Anil Kadam",
   });
 
-  const operatorSession = JSON.stringify({
+  const operatorSession = signedSession({
     id: "user-op-c07",
     role: "operator",
     name: "Ramesh Patil",

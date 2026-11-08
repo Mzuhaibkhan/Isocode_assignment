@@ -9,8 +9,11 @@ import { PriceBoardCreateSchema, formatRupees } from "@procurement/shared";
 type PriceRow = typeof schema.priceBoard.$inferSelect;
 
 export async function pricesRoutes(app: FastifyInstance) {
-  // GET /prices/current - Get active price board
-  app.get("/prices/current", async (_req: FastifyRequest, reply: FastifyReply) => {
+  // GET /prices/current - Get active price board (any authenticated role)
+  app.get(
+    "/prices/current",
+    { preHandler: requireAuth(["operator", "office_manager"]) },
+    async (_req: FastifyRequest, reply: FastifyReply) => {
     const rows: PriceRow[] = await db
       .select()
       .from(schema.priceBoard)
@@ -33,10 +36,14 @@ export async function pricesRoutes(app: FastifyInstance) {
     }
 
     return reply.send({ prices: currentPrices });
-  });
+    }
+  );
 
-  // GET /prices/history - Complete price board history
-  app.get("/prices/history", async (_req: FastifyRequest, reply: FastifyReply) => {
+  // GET /prices/history - Complete price board history (any authenticated role)
+  app.get(
+    "/prices/history",
+    { preHandler: requireAuth(["operator", "office_manager"]) },
+    async (_req: FastifyRequest, reply: FastifyReply) => {
     const history: PriceRow[] = await db
       .select()
       .from(schema.priceBoard)
@@ -49,7 +56,8 @@ export async function pricesRoutes(app: FastifyInstance) {
     }));
 
     return reply.send({ history: formatted });
-  });
+    }
+  );
 
   // POST /prices - Publish new price (Office Manager only)
   app.post(

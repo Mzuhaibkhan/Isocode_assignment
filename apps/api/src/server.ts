@@ -27,8 +27,17 @@ export function buildServer(): FastifyInstance {
     contentSecurityPolicy: false,
   });
 
+  // CORS restricted to the configured web origin(s) (comma-separated in WEB_ORIGIN)
+  const allowedOrigins = config.WEB_ORIGIN.split(",").map((o) => o.trim());
   app.register(cors, {
-    origin: true,
+    origin: (origin: string | undefined, cb: (err: Error | null, allow: boolean) => void) => {
+      // Non-browser clients (curl, tests, the PWA fetch layer on device) send no Origin
+      if (!origin || allowedOrigins.includes(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error(`Origin ${origin} not allowed by CORS`), false);
+      }
+    },
     credentials: true,
   });
 

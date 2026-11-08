@@ -14,26 +14,52 @@ import { Button } from "./ui/Button.js";
 import { syncMembersAndPrices } from "./offline/syncMembersAndPrices.js";
 import { registerDeviceWithServer } from "./offline/signer.js";
 import { startSyncLoop } from "./offline/syncClient.js";
-import { db } from "./offline/db.js";
+import { db, getActiveUser, type ActiveUserRecord } from "./offline/db.js";
+import { getNavItems, type NavTabId, type AppRole } from "./nav.js";
+import { t } from "./i18n/mr.js";
 
-interface ActiveUser {
-  role: string;
-  name: string;
+// Prices shown in the header ticker come from the Dexie price cache, never
+// hardcoded values — the ticker reflects what the centre actually priced.
+function useCachedTicker(): string {
+  const [ticker, setTicker] = useState("");
+  useEffect(() => {
+    let mounted = true;
+    const refresh = async () => {
+      const prices = await db.prices.orderBy("crop").toArray();
+      if (!mounted) return;
+      if (prices.length === 0) {
+        setTicker("");
+      } else {
+        setTicker(prices.map((p) => `${p.crop.toUpperCase()}: ₹${p.rateRupees}/QTL`).join(" • "));
+      }
+    };
+    refresh();
+    const interval = setInterval(refresh, 30_000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+  return ticker;
 }
 
 export function App() {
-  const [user, setUser] = useState<ActiveUser | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "collect" | "members" | "prices" | "sync" | "review" | "payments" | "devices" | "sms" | "centres" | "slips"
-  >("collect");
+  const [user, setUser] = useState<ActiveUserRecord | null>(null);
+  const [activeTab, setActiveTab] = useState<NavTabId>("collect");
   const [sampleIndex, setSampleIndex] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+  const ticker = useCachedTicker();
 
   useEffect(() => {
-    // Initial device registration and background cache download (§9.1)
-    registerDeviceWithServer();
-    syncMembersAndPrices();
+    // Restore a previously verified login (e.g. offline unlock within 48h)
+    getActiveUser().then((cached) => {
+      if (cached) {
+        setUser(cached);
+        if (cached.role === "operator") setActiveTab("collect");
+        else setActiveTab("members");
+      }
+    });
 
     // Start background sync loop (§9.6)
     const cleanupSync = startSyncLoop((stats) => {
@@ -96,13 +122,25 @@ export function App() {
   if (!user) {
     return (
       <Login
-        onLoginSuccess={(loggedInUser) => {
+        onLoginSuccess={(loggedInUser, nextSlipNo) => {
           setUser(loggedInUser);
           if (loggedInUser.role === "operator") {
             setActiveTab("collect");
+            // Seed the per-centre slip counter with the server's next slip
+            // number and register this device to the operator's centre (§ centre identity).
+            if (typeof nextSlipNo === "number" && loggedInUser.centreCode) {
+              void db.meta.put({
+                key: `slipCounter:${loggedInUser.centreCode}`,
+                value: nextSlipNo,
+              });
+            }
+            if (loggedInUser.centreId) {
+              void registerDeviceWithServer(loggedInUser.centreId);
+            }
           } else {
             setActiveTab("members");
           }
+          void syncMembersAndPrices();
         }}
       />
     );
@@ -110,23 +148,9 @@ export function App() {
 
   const activeSlip = sampleSlips[sampleIndex];
 
-  const navItems: Array<{
-    id: typeof activeTab;
-    marathi: string;
-    en: string;
-    badge?: number;
-  }> = [
-    { id: "collect", marathi: "नवीन खरेदी", en: "Collect" },
-    { id: "members", marathi: "सभासद", en: "Members" },
-    { id: "prices", marathi: "दर फलक", en: "Prices" },
-    { id: "sync", marathi: "सिंक स्थिती", en: "Sync", badge: pendingSyncCount },
-    { id: "review", marathi: "पुनरावलोकन", en: "Review" },
-    { id: "payments", marathi: "देयक फाईल", en: "Payments" },
-    { id: "centres", marathi: "दैनिक साठा", en: "Stock" },
-    { id: "devices", marathi: "साधने", en: "Devices" },
-    { id: "sms", marathi: "SMS नोंदी", en: "SMS" },
-    { id: "slips", marathi: "नमुना पावती", en: "Slips" },
-  ];
+  // Role guard: an operator never sees office tabs and vice versa (§ role-based UI)
+  const visibleNavItems = getNavItems(user.role as AppRole, pendingSyncCount);
+  const activeTabAllowed = visibleNavItems.some((item) => item.id === activeTab);
 
   return (
     <div className="min-h-screen bg-chaos-canvas text-chaos-black flex flex-col font-sans selection:bg-chaos-orange selection:text-white">
@@ -139,7 +163,7 @@ export function App() {
         </div>
         <div className="flex items-center gap-4">
           <span className="hidden sm:inline text-chaos-muted font-mono">
-            SOYBEAN: ₹4,850/QTL • TUR: ₹7,200/QTL
+            {ticker || "PRICES SYNC ON LOGIN"}
           </span>
           <span className="text-chaos-orange font-bold font-mono">AES-GCM P-256</span>
         </div>
@@ -159,7 +183,9 @@ export function App() {
                   लातूर शेतकरी उत्पादक कंपनी
                 </span>
                 <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-chaos-orange text-chaos-black uppercase tracking-wider">
-                  {user.role === "office_manager" ? "HQ OFFICE" : "CENTRE C07"}
+                  {user.role === "office_manager"
+                    ? "HQ OFFICE"
+                    : `CENTRE ${user.centreCode ?? "—"}`}
                 </span>
               </div>
               <p className="font-mono text-[10px] uppercase tracking-wider text-chaos-muted mt-0.5">
@@ -181,7 +207,7 @@ export function App() {
                   isOnline ? "bg-emerald-600 animate-ping" : "bg-red-600"
                 }`}
               />
-              <span>{isOnline ? "ONLINE // जोडलेले" : "OFFLINE // स्थानिक"}</span>
+              <span>{isOnline ? t("sync.online") : t("sync.offline")}</span>
             </div>
 
             {/* User Pill */}
@@ -207,7 +233,7 @@ export function App() {
         {/* Tactical Index Tab Rail */}
         <nav className="border-t-2 border-chaos-black bg-chaos-canvas overflow-x-auto scrollbar-none">
           <div className="max-w-6xl mx-auto px-4 flex gap-1 py-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
                 <button
@@ -235,16 +261,21 @@ export function App() {
 
       {/* Main Editorial Body */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 animate-fadeIn">
-        {activeTab === "collect" && <CollectFlow />}
-        {activeTab === "members" && <MemberList />}
-        {activeTab === "prices" && <PriceBoard />}
-        {activeTab === "sync" && <SyncPanel />}
-        {activeTab === "review" && <ReviewQueue />}
-        {activeTab === "payments" && <PaymentRuns />}
-        {activeTab === "centres" && <CentreSummary />}
-        {activeTab === "devices" && <DeviceManagement />}
-        {activeTab === "sms" && <SmsLogView />}
-        {activeTab === "slips" && (
+        {!activeTabAllowed && (
+          <div className="border-2 border-chaos-black bg-chaos-canvas p-6 text-center font-mono text-sm uppercase tracking-widest">
+            [!] या पानात प्रवेश नाही // ACCESS DENIED FOR YOUR ROLE
+          </div>
+        )}
+        {activeTabAllowed && activeTab === "collect" && <CollectFlow />}
+        {activeTabAllowed && activeTab === "members" && <MemberList />}
+        {activeTabAllowed && activeTab === "prices" && <PriceBoard />}
+        {activeTabAllowed && activeTab === "sync" && <SyncPanel />}
+        {activeTabAllowed && activeTab === "review" && <ReviewQueue />}
+        {activeTabAllowed && activeTab === "payments" && <PaymentRuns />}
+        {activeTabAllowed && activeTab === "centres" && <CentreSummary />}
+        {activeTabAllowed && activeTab === "devices" && <DeviceManagement />}
+        {activeTabAllowed && activeTab === "sms" && <SmsLogView />}
+        {activeTabAllowed && activeTab === "slips" && (
           <div className="max-w-xl mx-auto flex flex-col gap-6">
             <div className="border-2 border-chaos-black bg-chaos-paper p-4 shadow-tactile">
               <span className="font-mono text-xs uppercase text-chaos-muted tracking-wider block mb-1">

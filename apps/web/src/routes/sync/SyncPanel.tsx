@@ -4,6 +4,7 @@ import { getOrCreateDeviceKey } from "../../offline/signer.js";
 import { syncPurchases, simulateTamperOutbox } from "../../offline/syncClient.js";
 import { formatRupees, SYNC_REASON_LABELS_MR } from "@procurement/shared";
 import { Button } from "../../ui/Button.js";
+import { t, tf } from "../../i18n/mr.js";
 
 const REASON_LABELS: Record<string, string> = {
   ...SYNC_REASON_LABELS_MR,
@@ -47,23 +48,27 @@ export function SyncPanel() {
 
   const handleManualSync = async () => {
     setIsSyncing(true);
-    setStatusMessage("सर्व्हरशी संपर्क साधत आहे... [SYNCING ENCLAVE]");
+    setStatusMessage(t("sync.enclaveSyncing"));
 
     try {
       const res = await syncPurchases();
       await loadOutbox();
 
       if (res.error) {
-        setStatusMessage(`सिंक अयशस्वी: ${res.error}`);
+        setStatusMessage(tf("sync.syncFailed", { error: res.error }));
       } else if (res.syncedCount === 0 && res.rejectedCount === 0 && res.heldCount === 0) {
-        setStatusMessage("कोणतीही नवीन नोंद प्रलंबित नाही. सर्व नोंदी अद्ययावत आहेत. [ALL CACHES SYNCED]");
+        setStatusMessage(t("sync.allSynced"));
       } else {
         setStatusMessage(
-          `सिंक पूर्ण! समक्रमित: ${res.syncedCount}, प्रलंबित/होल्ड: ${res.heldCount}, नाकारलेले: ${res.rejectedCount}`
+          tf("sync.syncComplete", {
+            synced: res.syncedCount,
+            held: res.heldCount,
+            rejected: res.rejectedCount,
+          })
         );
       }
     } catch (err: any) {
-      setStatusMessage(`त्रुटी: ${err.message}`);
+      setStatusMessage(tf("sync.errorLabel", { message: err.message }));
     } finally {
       setIsSyncing(false);
     }
@@ -71,31 +76,29 @@ export function SyncPanel() {
 
   const handleSimulateTamper = async () => {
     setIsSyncing(true);
-    setStatusMessage("छेडछाड चाचणी सुरू आहे (INDEXEDDB MUTATING VALUE WITHOUT VALID SIGNATURE)...");
+    setStatusMessage(t("sync.tamperStarted"));
 
     try {
       const tampered = await simulateTamperOutbox();
       if (!tampered) {
-        setStatusMessage("छेडछाड करण्यासाठी आऊटबॉक्समध्ये कोणतीही नोंद आढळली नाही. कृपया प्रथम खरेदी नोंदवा.");
+        setStatusMessage(t("sync.tamperNoEntries"));
         setIsSyncing(false);
         return;
       }
 
       await loadOutbox();
-      setStatusMessage("वजन बदलले गेले! आता सर्व्हर पडताळणीसाठी पाठवत आहे...");
+      setStatusMessage(t("sync.tamperMutated"));
 
       const res = await syncPurchases();
       await loadOutbox();
 
       if (res.rejectedCount > 0) {
-        setStatusMessage(
-          "यशस्वी चाचणी: सर्व्हरने छेडछाड ओळखली आणि नोंद तत्काळ 'HASH_MISMATCH' म्हणून नाकारली! [CRYPTO DEFENSE ACTIVE]"
-        );
+        setStatusMessage(t("sync.tamperSuccess"));
       } else {
-        setStatusMessage(`सिंक प्रतिसाद: ${JSON.stringify(res)}`);
+        setStatusMessage(tf("sync.syncResponse", { detail: JSON.stringify(res) }));
       }
     } catch (err: any) {
-      setStatusMessage(`त्रुटी: ${err.message}`);
+      setStatusMessage(tf("sync.errorLabel", { message: err.message }));
     } finally {
       setIsSyncing(false);
     }
@@ -113,7 +116,7 @@ export function SyncPanel() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="font-mono text-xs uppercase font-bold text-chaos-orange tracking-widest">
-                CRYPTOGRAPHIC ENCLAVE // सिंक स्थिती
+                {t("sync.enclaveHeader")}
               </span>
               <span
                 className={`font-mono text-[10px] px-2 py-0.5 border font-bold uppercase tracking-wider ${
@@ -122,11 +125,11 @@ export function SyncPanel() {
                     : "bg-red-100 text-red-700 border-red-600"
                 }`}
               >
-                {isOnline ? "ONLINE // जोडलेले" : "OFFLINE // स्थानिक"}
+                {isOnline ? t("sync.online") : t("sync.offline")}
               </span>
             </div>
             <h2 className="font-display font-black text-3xl sm:text-4xl uppercase tracking-tight text-chaos-black">
-              ऑफलाइन सिंक स्थिती (TAMPER-PROOF OUTBOX)
+              {t("sync.outboxTitle")}
             </h2>
             <p className="font-mono text-xs text-chaos-muted uppercase tracking-wider mt-1">
               DEVICE: <span className="text-chaos-black font-bold">{deviceId || "INITIALIZING..."}</span> • PROTOCOL:{" "}
@@ -143,7 +146,7 @@ export function SyncPanel() {
               size="default"
               className="shadow-tactile-sm"
             >
-              {isSyncing ? "सिंक होत आहे..." : "🔄 आता सिंक करा // SYNC NOW"}
+              {isSyncing ? t("sync.syncing") : t("sync.syncNow")}
             </Button>
 
             <Button
@@ -152,9 +155,9 @@ export function SyncPanel() {
               variant="secondary"
               size="default"
               className="shadow-tactile-sm"
-              title="स्थानिक डेटाबेसमध्ये फेरफार करून सर्व्हरच्या HASH_MISMATCH सुरक्षेची चाचणी घ्या"
+              title={t("sync.tamperTestHint")}
             >
-              ⚠️ छेडछाड चाचणी // TEST TAMPER
+              {t("sync.tamperTest")}
             </Button>
           </div>
         </div>
@@ -176,7 +179,7 @@ export function SyncPanel() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-chaos-paper border-2 border-chaos-black p-5 shadow-tactile text-left">
           <span className="font-mono text-xs font-bold text-chaos-muted uppercase tracking-widest block">
-            01 // प्रलंबित नोंदी (PENDING)
+            {t("sync.pendingCount")}
           </span>
           <span className="font-display font-black text-5xl text-chaos-black block my-1 tracking-tight">
             {pendingCount}
@@ -188,7 +191,7 @@ export function SyncPanel() {
 
         <div className="bg-chaos-paper border-2 border-chaos-black p-5 shadow-tactile text-left">
           <span className="font-mono text-xs font-bold text-chaos-muted uppercase tracking-widest block">
-            02 // समक्रमित नोंदी (SYNCED)
+            {t("sync.syncedCount")}
           </span>
           <span className="font-display font-black text-5xl text-chaos-black block my-1 tracking-tight">
             {syncedCount}
@@ -200,7 +203,7 @@ export function SyncPanel() {
 
         <div className="bg-chaos-paper border-2 border-chaos-black p-5 shadow-tactile text-left">
           <span className="font-mono text-xs font-bold text-chaos-muted uppercase tracking-widest block">
-            03 // नाकारलेले फेरफार (REJECTED)
+            {t("sync.rejectedCount")}
           </span>
           <span className="font-display font-black text-5xl text-red-600 block my-1 tracking-tight">
             {rejectedCount}
@@ -215,7 +218,7 @@ export function SyncPanel() {
       <div className="bg-chaos-paper border-2 border-chaos-black p-6 shadow-tactile">
         <div className="pb-4 mb-4 border-b-2 border-chaos-black flex justify-between items-center">
           <h2 className="font-display font-black text-2xl uppercase tracking-tight text-chaos-black">
-            स्थानिक आउटबॉक्स नोंदी (OUTBOX CHAIN)
+            {t("sync.outboxRecords")}
           </h2>
           <span className="font-mono text-xs text-chaos-muted uppercase">
             TOTAL RECORDS: {entries.length}
@@ -224,7 +227,7 @@ export function SyncPanel() {
 
         {entries.length === 0 ? (
           <div className="p-12 text-center text-chaos-muted font-mono text-xs uppercase tracking-wider border-2 border-dashed border-chaos-black/40 bg-chaos-canvas">
-            [ स्थानिक आउटबॉक्स रिकामे आहे // OUTBOX BUFFER EMPTY ]
+            {t("sync.outboxEmpty")}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -232,17 +235,17 @@ export function SyncPanel() {
               <thead>
                 <tr className="border-b-2 border-chaos-black text-chaos-muted uppercase">
                   <th className="py-2.5 px-3">SEQ</th>
-                  <th className="py-2.5 px-3">पावती क्रमांक (SLIP)</th>
-                  <th className="py-2.5 px-3">पीक व वजन (COMMODITY)</th>
-                  <th className="py-2.5 px-3">रक्कम (AMOUNT)</th>
-                  <th className="py-2.5 px-3">स्थिती (STATUS)</th>
-                  <th className="py-2.5 px-3">तपासणी (INSPECT)</th>
+                  <th className="py-2.5 px-3">{t("sync.slipCol")}</th>
+                  <th className="py-2.5 px-3">{t("sync.commodityCol")}</th>
+                  <th className="py-2.5 px-3">{t("sync.amountCol")}</th>
+                  <th className="py-2.5 px-3">{t("sync.statusCol")}</th>
+                  <th className="py-2.5 px-3">{t("sync.inspectCol")}</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map((entry) => {
                   const p = entry.payload as any;
-                  const cropLabel = p.crop === "Soybean" ? "सोयाबीन" : p.crop === "Tur" ? "तूर" : p.crop;
+                  const cropLabel = p.crop === "Soybean" ? t("sync.soybean") : p.crop === "Tur" ? t("sync.tur") : p.crop;
                   const netKg = p.netX10 ? (p.netX10 / 10).toFixed(1) : "-";
                   const amount = p.amountPaise ? formatRupees(p.amountPaise) : "-";
                   const reasonMarathi = entry.reason ? REASON_LABELS[entry.reason] || entry.reason : null;
@@ -313,10 +316,10 @@ export function SyncPanel() {
             <div className="flex justify-between items-start border-b-2 border-chaos-black pb-3">
               <div>
                 <span className="font-mono text-xs text-chaos-orange uppercase font-bold tracking-widest block">
-                  CHAIN FORENSICS // पडताळणी
+                  {t("sync.forensicsHeader")}
                 </span>
                 <h3 className="font-display font-black text-2xl uppercase tracking-tight text-chaos-black">
-                  क्रिप्टोग्राफिक स्वाक्षरी आणि हॅश साखळी (#SEQ {selectedEntry.seq})
+                  {tf("sync.forensicsTitle", { seq: selectedEntry.seq })}
                 </h3>
               </div>
               <button
@@ -330,7 +333,7 @@ export function SyncPanel() {
             <div className="space-y-3 font-mono text-xs">
               <div>
                 <span className="font-bold uppercase text-chaos-muted block mb-1">
-                  पावती ओळख (RECORD ID):
+                  {t("sync.recordId")}
                 </span>
                 <span className="text-chaos-black bg-white p-2 border border-chaos-black block break-all font-mono">
                   {selectedEntry.id}
@@ -339,7 +342,7 @@ export function SyncPanel() {
 
               <div>
                 <span className="font-bold uppercase text-chaos-muted block mb-1">
-                  मागील नोंदीचा हॅश (PREVIOUS HASH):
+                  {t("sync.prevHashLabel")}
                 </span>
                 <span className="text-chaos-black bg-white p-2 border border-chaos-black block break-all font-mono">
                   {selectedEntry.prevHash}
@@ -348,7 +351,7 @@ export function SyncPanel() {
 
               <div>
                 <span className="font-bold uppercase text-chaos-muted block mb-1">
-                  या नोंदीचा हॅश (ENTRY HASH):
+                  {t("sync.entryHashLabel")}
                 </span>
                 <span className="text-chaos-black bg-white p-2 border border-chaos-black block break-all font-mono font-bold text-chaos-orange">
                   {selectedEntry.entryHash}
@@ -357,7 +360,7 @@ export function SyncPanel() {
 
               <div>
                 <span className="font-bold uppercase text-chaos-muted block mb-1">
-                  ECDSA P-256 डिजिटल स्वाक्षरी (DEVICE SIGNATURE):
+                  {t("sync.signatureLabel")}
                 </span>
                 <span className="text-chaos-black bg-emerald-50 border border-emerald-600 p-2 block break-all font-mono">
                   {selectedEntry.signature}
@@ -366,7 +369,7 @@ export function SyncPanel() {
 
               <div>
                 <span className="font-bold uppercase text-chaos-muted block mb-1">
-                  पेलोड डेटा (PAYLOAD BLOB):
+                  {t("sync.payloadLabel")}
                 </span>
                 <pre className="text-chaos-black bg-white border border-chaos-black p-3 text-[11px] overflow-x-auto font-mono">
                   {JSON.stringify(selectedEntry.payload, null, 2)}
@@ -380,7 +383,7 @@ export function SyncPanel() {
                 onClick={() => setSelectedEntry(null)}
                 className="shadow-tactile-sm"
               >
-                बंद करा // CLOSE
+                {t("sync.close")}
               </Button>
             </div>
           </div>
