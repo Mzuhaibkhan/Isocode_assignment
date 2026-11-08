@@ -9,70 +9,77 @@ import crypto from "node:crypto";
 
 export async function devicesRoutes(app: FastifyInstance) {
   // POST /devices/register - Register device public key (§9.1)
-  app.post("/devices/register", async (req: FastifyRequest, reply: FastifyReply) => {
-    const parsed = DeviceRegisterSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.status(400).send({
-        error: "Validation failed",
-        details: parsed.error.flatten(),
-      });
-    }
+  // Operator-authenticated; centre and user are taken from the session, never
+  // from the client. Re-registering a revoked device is refused (§8, §9.7).
+  app.post(
+    "/devices/register",
+    { preHandler: requireAuth(["operator"]) },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const parsed = DeviceRegisterSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: "Validation failed",
+          details: parsed.error.flatten(),
+        });
+      }
 
-    const { centreId, publicKeyJwk } = parsed.data;
-    const deviceId = parsed.data.deviceId || `dev-${crypto.randomUUID().slice(0, 8)}`;
+      const { publicKeyJwk } = parsed.data;
+      const deviceId = parsed.data.deviceId || `dev-${crypto.randomUUID().slice(0, 8)}`;
 
-    // Resolve active user (operator or office manager)
-    let userId = "user-op-c07";
-    const sessionCookie = req.cookies.session;
-    if (sessionCookie) {
-      try {
-        const u = JSON.parse(sessionCookie);
-        if (u.id) userId = u.id;
-      } catch {}
-    }
+      const userId = req.user!.id;
+      const centreId = req.user!.centreId;
+      if (!centreId) {
+        return reply.status(403).send({ error: "No centre assigned to this operator" });
+      }
 
-    const [existing] = await db
-      .select()
-      .from(schema.devices)
-      .where(eq(schema.devices.id, deviceId))
-      .limit(1);
+      const [existing] = await db
+        .select()
+        .from(schema.devices)
+        .where(eq(schema.devices.id, deviceId))
+        .limit(1);
 
-    const now = new Date();
+      if (existing?.revokedAt) {
+        return reply.status(403).send({
+          error: "DEVICE_REVOKED",
+          message:
+            "हे साधन रद्द करण्यात आले आहे. पुन्हा सुरू करण्यासाठी कार्यालयाशी संपर्क करा.",
+        });
+      }
 
-    if (existing) {
-      await db
-        .update(schema.devices)
-        .set({
+      const now = new Date();
+
+      if (existing) {
+        await db
+          .update(schema.devices)
+          .set({
+            userId,
+            centreId,
+            publicKeyJwk,
+            registeredAt: now,
+          })
+          .where(eq(schema.devices.id, deviceId));
+      } else {
+        await db.insert(schema.devices).values({
+          id: deviceId,
           userId,
           centreId,
           publicKeyJwk,
           registeredAt: now,
           revokedAt: null,
-          revokedBy: null,
-          revocationReason: null,
-        })
-        .where(eq(schema.devices.id, deviceId));
-    } else {
-      await db.insert(schema.devices).values({
-        id: deviceId,
-        userId,
+        });
+      }
+
+      await recordAudit(userId, "DEVICE_REGISTERED", "device", deviceId, {
         centreId,
-        publicKeyJwk,
-        registeredAt: now,
-        revokedAt: null,
+      });
+
+      return reply.status(200).send({
+        success: true,
+        deviceId,
+        registeredAt: now.toISOString(),
       });
     }
-
-    await recordAudit(userId, "DEVICE_REGISTERED", "device", deviceId, {
-      centreId,
-    });
-
-    return reply.status(200).send({
-      success: true,
-      deviceId,
-      registeredAt: now.toISOString(),
-    });
-  });
+  );
 
   // GET /devices - List registered devices (§8, §13.3)
   app.get(
@@ -141,5 +148,33 @@ export async function devicesRoutes(app: FastifyInstance) {
       });
     }
   );
-}
 
+  // POST /devices/:id/reenable - Office-only path to restore a revoked device.
+  // Registration alone can never lift a revocation (§8, §9.7).
+  app.post<{ Params: { id: string } }>(
+    "/devices/:id/reenable",
+    { preHandler: requireAuth(["office_manager"]) },
+    async (req, reply) => {
+      const { id } = req.params;
+
+      const [device] = await db
+        .select()
+        .from(schema.devices)
+        .where(eq(schema.devices.id, id))
+        .limit(1);
+
+      if (!device) {
+        return reply.status(404).send({ error: "Device not found" });
+      }
+
+      await db
+        .update(schema.devices)
+        .set({ revokedAt: null, revokedBy: null, revocationReason: null })
+        .where(eq(schema.devices.id, id));
+
+      await recordAudit(req.user!.id, "DEVICE_REENABLED", "device", id, {});
+
+      return reply.send({ success: true, deviceId: id, reenabledAt: new Date().toISOString() });
+    }
+  );
+}
