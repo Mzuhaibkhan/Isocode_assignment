@@ -21,5 +21,8 @@ jobs:
       - run: pnpm install
       - run: pnpm run typecheck
       - run: pnpm run test
+      # Playwright e2e (§G1): boots its own API (NODE_ENV=test, PGlite) + vite.
+      - run: pnpm --dir apps/web exec playwright install --with-deps chromium
+      - run: pnpm --dir apps/web run test:e2e
       - run: pnpm run build
 
