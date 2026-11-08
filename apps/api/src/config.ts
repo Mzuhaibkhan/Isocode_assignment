@@ -8,6 +8,7 @@ export const EnvSchema = z.object({
   VISION_API_KEY: z.string().min(1),
   BANK_AES_KEY: z.string().length(64, "BANK_AES_KEY must be 64 hex characters (32 bytes)"),
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters long"),
+  WEB_ORIGIN: z.string().default("http://localhost:5173"),
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
@@ -31,6 +32,7 @@ const testDefaults = isTestEnv
       VISION_API_KEY: process.env.VISION_API_KEY || "mock-vision-api-key",
       BANK_AES_KEY: process.env.BANK_AES_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       SESSION_SECRET: process.env.SESSION_SECRET || "supersecretlongsessionkeymustbe32charactersormore",
+      WEB_ORIGIN: process.env.WEB_ORIGIN || "http://localhost:5173",
       PORT: process.env.PORT || "3000",
       NODE_ENV: "test",
     }

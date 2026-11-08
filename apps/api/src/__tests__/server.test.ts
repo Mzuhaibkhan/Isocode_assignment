@@ -4,6 +4,7 @@ import { FastifyInstance } from "fastify";
 import { parseConfig, EnvSchema } from "../config.js";
 import { encryptBank, decryptBank, maskBankAccount } from "../crypto/aes.js";
 import { hashSecret, verifySecret } from "../auth/hash.js";
+import { signedSession } from "./helpers/sessions.js";
 
 describe("API Core & Foundations (§Phase 1)", () => {
   let app: FastifyInstance;
@@ -140,11 +141,12 @@ describe("API Core & Foundations (§Phase 1)", () => {
     });
 
     it("enforces role permissions when session cookie is provided", async () => {
-      // Mock operator session
-      const opCookie = JSON.stringify({
-        id: "user-op-1",
+      // Operator session (signed, matching the server's HMAC scheme)
+      const opCookie = signedSession({
+        id: "user-op-c07",
         role: "operator",
-        name: "Test Operator",
+        name: "Ramesh Patil",
+        centreId: "centre-c07",
       });
 
       const resOfficeWithOp = await app.inject({
