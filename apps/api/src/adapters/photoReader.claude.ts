@@ -32,15 +32,9 @@ export async function readDisplayPhoto(
 ): Promise<PhotoReadResult> {
   const cleanBase64 = base64Data.replace(/^data:image\/[a-z]+;base64,/, "");
 
-  // If in development/test or mock API key is set, provide deterministic fallback/simulated OCR
-  if (
-    config.NODE_ENV === "test" ||
-    config.VISION_API_KEY === "mock" ||
-    config.VISION_API_KEY === "mock-vision-api-key" ||
-    config.VISION_API_KEY === "test" ||
-    !config.VISION_API_KEY ||
-    config.VISION_API_KEY.startsWith("test-")
-  ) {
+  // Deterministic simulated OCR exists ONLY for automated test environments.
+  // Production never fabricates a reading: failures surface as unreadable.
+  if (config.NODE_ENV === "test") {
     return simulateDisplayReading(cleanBase64, kind);
   }
 
@@ -84,7 +78,12 @@ export async function readDisplayPhoto(
 
     if (!response.ok) {
       console.warn("Vision API returned non-200 status:", response.status);
-      return simulateDisplayReading(cleanBase64, kind);
+      return {
+        value: null,
+        valueX10: null,
+        confidence: "low",
+        note: `Vision API error (HTTP ${response.status})`,
+      };
     }
 
     const data: any = await response.json();
@@ -114,13 +113,18 @@ export async function readDisplayPhoto(
       rawJson: jsonMatch[0],
     };
   } catch (err: any) {
-    console.warn("Vision API request failed, falling back to simulated OCR:", err.message);
-    return simulateDisplayReading(cleanBase64, kind);
+    console.warn("Vision API request failed:", err.message);
+    return {
+      value: null,
+      valueX10: null,
+      confidence: "low",
+      note: "Vision API request failed: " + (err.message || "unknown error"),
+    };
   }
 }
 
 /**
- * Intelligent deterministic simulator for automated test environments and offline demonstration.
+ * Deterministic simulator for automated test environments and offline demos.
  */
 function simulateDisplayReading(
   cleanBase64: string,
