@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import "fake-indexeddb/auto";
-import { AppDB } from "../offline/db.js";
+import { AppDB, saveActiveUser } from "../offline/db.js";
 import { getOrCreateDeviceKey } from "../offline/signer.js";
 import { enqueuePurchase } from "../offline/queue.js";
 import { syncPurchases, simulateTamperOutbox } from "../offline/syncClient.js";
@@ -17,6 +17,16 @@ describe("Phase 4: Client Offline-First Tamper-Proof Sync (§9.1 - §9.8)", () =
     await db.members.clear();
     await db.prices.clear();
     await db.meta.clear();
+    // Centre identity now comes from the verified login record (§ centre
+    // identity). Seed a C07 operator so centre-less enqueue calls work.
+    await saveActiveUser({
+      id: "user-op-c07",
+      role: "operator",
+      name: "राम पाटील",
+      centreId: "centre-c07",
+      centreCode: "C07",
+      authAt: new Date().toISOString(),
+    });
     vi.restoreAllMocks();
   });
 

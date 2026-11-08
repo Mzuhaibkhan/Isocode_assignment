@@ -3,11 +3,13 @@ const ECDSA_KEY_GEN = { name: "ECDSA", namedCurve: "P-256" } as const;
 
 /**
  * Generates an ECDSA P-256 key pair for device identity and tamper-proof signing (§9.1, §9.4).
+ * The key pair is non-extractable: the private key can never leave the device,
+ * and the CryptoKeyPair object is persisted as-is in IndexedDB (structured clone).
  */
 export async function generateDeviceKeyPair(): Promise<CryptoKeyPair> {
   return globalThis.crypto.subtle.generateKey(
     ECDSA_KEY_GEN,
-    true, // Extractable so the public key can be exported to JWK
+    false, // Non-extractable: the private key stays inside the secure context
     ["sign", "verify"]
   );
 }

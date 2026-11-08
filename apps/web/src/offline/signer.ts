@@ -57,8 +57,9 @@ export async function getOrCreateDeviceKey(): Promise<{
 
 /**
  * Registers the device public key with the backend server (§9.1 step 3).
+ * The centre id is always taken from the verified operator login — never a default.
  */
-export async function registerDeviceWithServer(centreId = "centre-c07"): Promise<boolean> {
+export async function registerDeviceWithServer(centreId: string): Promise<boolean> {
   try {
     const { deviceId, publicKeyJwk } = await getOrCreateDeviceKey();
 

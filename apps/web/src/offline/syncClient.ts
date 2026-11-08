@@ -1,5 +1,5 @@
 import { db, OutboxEntry } from "./db.js";
-import { getOrCreateDeviceKey, registerDeviceWithServer } from "./signer.js";
+import { getOrCreateDeviceKey } from "./signer.js";
 import { syncMembersAndPrices } from "./syncMembersAndPrices.js";
 import type { SyncRejectionReasonType, SyncHoldReasonType } from "@procurement/shared";
 
@@ -60,13 +60,10 @@ export async function syncPurchases(): Promise<SyncResult> {
     };
   }
 
-  // 2. Ensure device is registered
+  // 2. Device must already be registered (registration happens once, right
+  // after operator login — never auto-re-registered here, so a revoked device
+  // stays revoked and its batch is rejected with DEVICE_REVOKED by the server).
   const { deviceId } = await getOrCreateDeviceKey();
-  try {
-    await registerDeviceWithServer();
-  } catch {
-    // If device registration check fails, attempt batch sync anyway
-  }
 
   // 3. Process pending entries in chunks of 10 (§9.6)
   const CHUNK_SIZE = 10;
@@ -179,6 +176,9 @@ export async function syncPurchases(): Promise<SyncResult> {
     }
   }
 
+  // 5. Upload photo evidence for accepted/held purchases (§10.2)
+  await uploadQueuedPhotos();
+
   return {
     success: true,
     syncedCount: totalSynced,
@@ -187,6 +187,70 @@ export async function syncPurchases(): Promise<SyncResult> {
     duplicateCount: totalDuplicate,
     results: allResults,
   };
+}
+
+/**
+ * Uploads queued scale/meter photos whose purchase has already synced (§10.2).
+ * Photos attach to accepted/held purchases only (FK is satisfied server-side).
+ * Marks each photo "uploaded" once the server confirms.
+ */
+export async function uploadQueuedPhotos(): Promise<number> {
+  const pendingPhotos = await db.photos.where("status").equals("pending").toArray();
+  if (pendingPhotos.length === 0) return 0;
+
+  // Only attach photos whose purchase reached the server (accepted/held/duplicate)
+  const syncedIds = new Set<string>();
+  const syncedOutbox = await db.outbox.where("status").equals("synced").toArray();
+  for (const entry of syncedOutbox) syncedIds.add(entry.id);
+
+  let uploaded = 0;
+  for (const photo of pendingPhotos) {
+    if (!photo.purchaseId || !syncedIds.has(photo.purchaseId)) continue;
+
+    try {
+      let res = await fetch("/api/photos/attach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          purchaseId: photo.purchaseId,
+          kind: photo.kind,
+          imageData: photo.imageData,
+          aiValueX10: photo.aiValueX10 ?? null,
+          typedValueX10: photo.typedValueX10,
+          matched: photo.matched,
+          aiNote: photo.aiNote,
+        }),
+      });
+
+      if (!res.ok && res.status === 404) {
+        res = await fetch("/photos/attach", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            purchaseId: photo.purchaseId,
+            kind: photo.kind,
+            imageData: photo.imageData,
+            aiValueX10: photo.aiValueX10 ?? null,
+            typedValueX10: photo.typedValueX10,
+            matched: photo.matched,
+            aiNote: photo.aiNote,
+          }),
+        });
+      }
+
+      if (res.ok) {
+        await db.photos.update(photo.id, { status: "uploaded" });
+        uploaded++;
+      } else if (res.status === 404) {
+        // Purchase not on server yet — leave pending for a later sync pass.
+        continue;
+      }
+    } catch (err) {
+      console.warn("Photo upload failed, will retry on next sync:", err);
+    }
+  }
+
+  return uploaded;
 }
 
 /**

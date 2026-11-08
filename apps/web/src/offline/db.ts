@@ -50,6 +50,33 @@ export interface QueuedPhoto {
   status: "pending" | "uploaded";
 }
 
+// The verified operator/office identity stored after a successful online login.
+// Offline unlock is only allowed while this record is fresh (§ auth hardening).
+export interface ActiveUserRecord {
+  id: string;
+  role: "operator" | "office_manager";
+  name: string;
+  centreId?: string | null;
+  centreCode?: string | null;
+  authAt: string;
+}
+
+// How long an offline operator unlock stays valid after the last online login.
+const OFFLINE_UNLOCK_HOURS = 48;
+
+export async function saveActiveUser(user: ActiveUserRecord): Promise<void> {
+  await db.meta.put({ key: "activeUser", value: user });
+}
+
+export async function getActiveUser(): Promise<ActiveUserRecord | undefined> {
+  return (await db.meta.get("activeUser"))?.value as ActiveUserRecord | undefined;
+}
+
+export function isOfflineUnlockValid(user: ActiveUserRecord): boolean {
+  const authAt = new Date(user.authAt).getTime();
+  return Date.now() - authAt <= OFFLINE_UNLOCK_HOURS * 60 * 60 * 1000;
+}
+
 export function buildNameTokens(name: string, nameLatin?: string): string[] {
   const tokens = new Set<string>();
 
