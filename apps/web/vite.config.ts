@@ -2,7 +2,18 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
+// Deterministic production build: force the production bundles of CJS deps
+// (react/react-dom/scheduler pick the development variants when
+// process.env.NODE_ENV is unset or set to something like "test"), and pin
+// the production JSX transform (react/jsx-runtime instead of the dev one).
+// Scoped to build only so the dev server keeps fast-refresh dev React.
+export default defineConfig(({ command }) => ({
+  ...(command === "build"
+    ? {
+        define: { "process.env.NODE_ENV": JSON.stringify("production") },
+        esbuild: { jsxDev: false },
+      }
+    : {}),
   plugins: [
     react(),
     VitePWA({
@@ -58,4 +69,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
