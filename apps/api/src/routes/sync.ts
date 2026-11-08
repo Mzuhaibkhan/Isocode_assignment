@@ -386,6 +386,7 @@ export async function syncRoutes(app: FastifyInstance) {
         nameLatin: member.nameLatin,
         village: member.village,
         mobile: member.mobile,
+        bankAccount: rawAc,
         bankAccountMasked: maskBankAccount(rawAc),
         ifsc: member.ifsc,
         bankVerified: !!member.bankVerifiedAt,

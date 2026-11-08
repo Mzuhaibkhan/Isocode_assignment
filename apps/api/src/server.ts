@@ -14,6 +14,7 @@ import { syncRoutes } from "./routes/sync.js";
 import { photosRoutes } from "./routes/photos.js";
 import { reviewRoutes } from "./routes/review.js";
 import { paymentsRoutes } from "./routes/payments.js";
+import { centresRoutes } from "./routes/centres.js";
 import { netWeightX10, amountPaise, formatRupees } from "@procurement/shared";
 
 export function buildServer(): FastifyInstance {
@@ -56,6 +57,7 @@ export function buildServer(): FastifyInstance {
   app.register(photosRoutes);
   app.register(reviewRoutes);
   app.register(paymentsRoutes);
+  app.register(centresRoutes);
 
   // Role guarded test endpoints for verification
   app.get(
