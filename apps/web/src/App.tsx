@@ -8,6 +8,7 @@ import { SyncPanel } from "./routes/sync/SyncPanel.js";
 import { ReviewQueue } from "./routes/review/ReviewQueue.js";
 import { PaymentRuns } from "./routes/payments/PaymentRuns.js";
 import { DeviceManagement } from "./routes/devices/DeviceManagement.js";
+import { CentreSummary } from "./routes/centres/CentreSummary.js";
 import { Slip } from "./ui/Slip.js";
 import { Button } from "./ui/Button.js";
 import { syncMembersAndPrices } from "./offline/syncMembersAndPrices.js";
@@ -23,7 +24,7 @@ interface ActiveUser {
 export function App() {
   const [user, setUser] = useState<ActiveUser | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "collect" | "members" | "prices" | "sync" | "review" | "payments" | "devices" | "sms" | "slips"
+    "collect" | "members" | "prices" | "sync" | "review" | "payments" | "devices" | "sms" | "centres" | "slips"
   >("collect");
   const [sampleIndex, setSampleIndex] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -121,6 +122,7 @@ export function App() {
     { id: "sync", marathi: "सिंक स्थिती", en: "Sync", badge: pendingSyncCount },
     { id: "review", marathi: "पुनरावलोकन", en: "Review" },
     { id: "payments", marathi: "देयक फाईल", en: "Payments" },
+    { id: "centres", marathi: "दैनिक साठा", en: "Stock" },
     { id: "devices", marathi: "साधने", en: "Devices" },
     { id: "sms", marathi: "SMS नोंदी", en: "SMS" },
     { id: "slips", marathi: "नमुना पावती", en: "Slips" },
@@ -239,6 +241,7 @@ export function App() {
         {activeTab === "sync" && <SyncPanel />}
         {activeTab === "review" && <ReviewQueue />}
         {activeTab === "payments" && <PaymentRuns />}
+        {activeTab === "centres" && <CentreSummary />}
         {activeTab === "devices" && <DeviceManagement />}
         {activeTab === "sms" && <SmsLogView />}
         {activeTab === "slips" && (
