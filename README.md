@@ -155,8 +155,9 @@ All cases verified by automated unit tests in both `packages/shared` and `apps/a
 
 ### 5.1 Device Registration & Key Generation
 - On first login, each operator device generates a standard NIST P-256 elliptic-curve keypair (`ECDSA P-256`, SHA-256) using `crypto.subtle.generateKey`.
-- The private key is flagged `extractable: false` and persisted in IndexedDB.
+- The private key is generated with `extractable: false` and the `CryptoKeyPair` is persisted in IndexedDB — the private key can never be exported or cloned off the device.
 - The public key is exported as JWK and registered with the server (`POST /devices/register`).
+- **Revocation is terminal** (`DEVICE_REVOKED` at register and sync) unless the office manager re-enables the device via `POST /devices/:id/reenable`, which clears `revoked_at` and writes a `DEVICE_REENABLED` audit entry.
 
 ### 5.2 Client Outbox & Hash Chaining
 Each recorded purchase creates an immutable record in IndexedDB:
@@ -234,7 +235,7 @@ The platform implements strict compliance with the **Digital Personal Data Prote
 
 ### 7.2 Encryption Key Rotation Procedure
 > [!NOTE]
-> Key rotation requires an offline migration script to read all existing rows of `members.bank_account_enc` and `purchases.member_snapshot_json`, decrypt using the retirement key (`PREVIOUS_BANK_ENCRYPTION_KEY`), and re-encrypt under the new active key (`BANK_ENCRYPTION_KEY`). Transactions remain paused during rotation.
+> Key rotation requires an offline migration script to read all existing rows of `members.bank_account_enc` and `purchases.member_snapshot_json`, decrypt using the retirement key (`PREVIOUS_BANK_AES_KEY`), and re-encrypt under the new active key (`BANK_AES_KEY`). Transactions remain paused during rotation.
 
 ---
 
@@ -245,9 +246,17 @@ The payment generation engine creates bank-ready disbursement files while enforc
 1. **Reconciliation Invariant**:
    $$\sum \text{PaymentLine Amounts} \equiv \sum \text{Approved Purchase Amounts (to exact paisa)}$$
    Any discrepancy aborts file generation immediately.
-2. **Standard 7-Column Disbursement Layout**:
+2. **Honest Purchase Status Machine**:
+   - `approved` → at run creation, included purchases move to `in_payment` (not `paid`).
+   - `in_payment` → `paid` only after the bank item reports `success` in `POST /payment-runs/:id/status`.
+   - A `failed` item (not yet retried) moves its purchase back to `approved`, making it eligible for a retry run; `retry-failed` sets retried purchases to `in_payment` again.
+   - `/payment-runs/eligible-purchases` excludes both `in_payment` and `paid`; `itemStatuses[].itemId` is validated against the run (cross-run updates are rejected with `ITEM_NOT_IN_RUN`).
+3. **Immutable Stored File, No Silent Fallbacks**:
+   - The generated CSV is stored verbatim in `payment_runs.file_content` at creation and `GET /payment-runs/:id/file` serves those exact stored bytes.
+   - Items whose member snapshot fails to decrypt, or whose bank details are missing/unverified, are **skipped and reported** in the run response (`skippedPurchases` with `SNAPSHOT_DECRYPT_FAILED`, `BANK_NOT_VERIFIED`, `BANK_DETAILS_MISSING`) — placeholder account numbers are never substituted.
+4. **Standard 7-Column Disbursement Layout**:
    `Serial,Beneficiary Name,Account Number,IFSC,Amount,Narration,Payment Reference`
-3. **Isolated Retry-Failed Architecture**:
+5. **Isolated Retry-Failed Architecture**:
    - If a bank returns transfer failures (e.g., account frozen, invalid IFSC), the office manager triggers `POST /payment-runs/:id/retry-failed`.
    - The engine generates a **brand-new run** (`kind: 'retry'`, referencing `parentRunId`) containing only the failed items.
    - **The original run, CSV file, and audit trail remain completely immutable.**
@@ -330,9 +339,14 @@ PORT=3000
 HOST=0.0.0.0
 DATABASE_URL=postgres://procurement:procurement_pass@localhost:5432/procurement_db
 SESSION_SECRET=super-secret-session-key-minimum-32-chars-long!
-BANK_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+BANK_AES_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+VISION_API_KEY=sk-ant-api03-your-anthropic-vision-key
+WEB_ORIGIN=http://localhost:5173
 NODE_ENV=development
 ```
+- `BANK_AES_KEY`: 64 hex characters (32 bytes) used to encrypt member bank accounts and purchase snapshots.
+- `VISION_API_KEY`: Anthropic Claude key for the meter/scale photo reader. In production the reader never fabricates readings — API failures surface as unreadable (`confidence: low`). Deterministic simulated OCR is restricted to `NODE_ENV=test`.
+- `WEB_ORIGIN`: CORS whitelist origin for the PWA.
 
 ### 12.3 Boot Database & Run Migrations
 ```bash
@@ -354,14 +368,18 @@ pnpm dev:web
 
 ### 12.5 Run Complete Test Suite
 ```bash
-# Run all 134 automated unit and integration tests
+# Run all 156 automated unit and integration tests
 pnpm test
 
 # Run type checks across all workspaces
 pnpm typecheck
 
-# Verify frontend production build and bundle size
+# Verify frontend production build (JS bundle stays ≤150 KB gzipped)
 pnpm --dir apps/web run build
+
+# Playwright end-to-end suite (boots its own API + PWA; requires Chromium)
+pnpm --dir apps/web exec playwright install chromium
+pnpm --dir apps/web run test:e2e
 ```
 
 ---
