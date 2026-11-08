@@ -133,12 +133,16 @@ export async function runSeed(targetDb?: any) {
   ];
 
   const now = new Date();
+  // Village → centre mapping mirrors the geography of the seed: Ausa and
+  // Shirur Anantpal fall under C07; Renapur and Nilanga under C12.
+  const c07Villages = new Set(["Ausa", "Shirur Anantpal"]);
   const memberRecords = baseMembers.map((m, idx) => ({
     id: `member-${idx + 1}`,
     farmerCode: m.code,
     name: m.name,
     nameLatin: m.latin,
     village: m.village,
+    centreId: c07Villages.has(m.village) ? c07.id : c12.id,
     landTenthsAcre: m.land,
     mobile: m.mobile,
     bankAccountEnc: encryptBank(m.ac),
