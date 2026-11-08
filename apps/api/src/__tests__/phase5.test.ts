@@ -14,6 +14,7 @@ import {
 import { decryptBank } from "../crypto/aes.js";
 import { eq, and, desc } from "drizzle-orm";
 import crypto from "node:crypto";
+import { signedSession } from "./helpers/sessions.js";
 
 describe("Phase 5: AI Reading, Flags, Review Queue, Payment Runs & Retry (§10, §12)", () => {
   let app: FastifyInstance;
@@ -22,13 +23,13 @@ describe("Phase 5: AI Reading, Flags, Review Queue, Payment Runs & Retry (§10, 
   const testDeviceId = "dev-test-p5-01";
   const centreId = "centre-c07";
 
-  const officeSession = JSON.stringify({
+  const officeSession = signedSession({
     id: "user-office-1",
     role: "office_manager",
     name: "Anil Kadam",
   });
 
-  const operatorSession = JSON.stringify({
+  const operatorSession = signedSession({
     id: "user-op-c07",
     role: "operator",
     name: "Ramesh Patil",
@@ -118,6 +119,7 @@ describe("Phase 5: AI Reading, Flags, Review Queue, Payment Runs & Retry (§10, 
       const res = await app.inject({
         method: "POST",
         url: "/photos/read",
+        cookies: { session: operatorSession },
         payload: {
           kind: "meter",
           image: "data:image/jpeg;base64," + Buffer.from("simulated-meter-photo-data-bytes").toString("base64"),
@@ -138,16 +140,20 @@ describe("Phase 5: AI Reading, Flags, Review Queue, Payment Runs & Retry (§10, 
 
       const res = await app.inject({
         method: "POST",
-        url: "/photos/read",
+        url: "/photos/attach",
+        cookies: { session: operatorSession },
         payload: {
-          kind: "meter",
-          image: "data:image/jpeg;base64," + Buffer.from("simulated-meter-photo-data-bytes").toString("base64"),
           purchaseId: existingPurchase.id,
+          kind: "meter",
+          imageData: "data:image/jpeg;base64," + Buffer.from("simulated-meter-photo-data-bytes").toString("base64"),
+          aiValueX10: 115,
           typedValueX10: 115, // matches AI 11.5%
+          matched: true,
+          aiNote: "LCD reading matched typed value",
         },
       });
 
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(201);
 
       // Verify purchase_photos record
       const [photoRow] = await db

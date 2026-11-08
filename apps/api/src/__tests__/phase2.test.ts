@@ -1,17 +1,18 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildServer } from "../server.js";
 import { FastifyInstance } from "fastify";
+import { signedSession } from "./helpers/sessions.js";
 
 describe("Phase 2: Member Registry & Price Board Integration Tests", () => {
   let app: FastifyInstance;
 
-  const officeSession = JSON.stringify({
+  const officeSession = signedSession({
     id: "user-office-1",
     role: "office_manager",
     name: "Anil Kadam",
   });
 
-  const operatorSession = JSON.stringify({
+  const operatorSession = signedSession({
     id: "user-op-c07",
     role: "operator",
     name: "Ramesh Patil",
@@ -32,6 +33,7 @@ describe("Phase 2: Member Registry & Price Board Integration Tests", () => {
       const res = await app.inject({
         method: "GET",
         url: "/members",
+        cookies: { session: officeSession },
       });
 
       expect(res.statusCode).toBe(200);
@@ -148,6 +150,7 @@ describe("Phase 2: Member Registry & Price Board Integration Tests", () => {
       const listRes = await app.inject({
         method: "GET",
         url: "/members",
+        cookies: { session: officeSession },
       });
       const listData = JSON.parse(listRes.payload);
       const member4 = listData.members.find((m: any) => m.id === "member-4");
@@ -160,6 +163,7 @@ describe("Phase 2: Member Registry & Price Board Integration Tests", () => {
       const res = await app.inject({
         method: "GET",
         url: "/prices/current",
+        cookies: { session: operatorSession },
       });
 
       expect(res.statusCode).toBe(200);
@@ -196,6 +200,7 @@ describe("Phase 2: Member Registry & Price Board Integration Tests", () => {
       const currentRes = await app.inject({
         method: "GET",
         url: "/prices/current",
+        cookies: { session: officeSession },
       });
       const currentData = JSON.parse(currentRes.payload);
       const updatedSoybean = currentData.prices.find((p: any) => p.crop === "Soybean");
@@ -207,6 +212,7 @@ describe("Phase 2: Member Registry & Price Board Integration Tests", () => {
       const res = await app.inject({
         method: "GET",
         url: "/prices/history",
+        cookies: { session: officeSession },
       });
 
       expect(res.statusCode).toBe(200);
@@ -227,6 +233,14 @@ describe("Phase 2: Member Registry & Price Board Integration Tests", () => {
       });
 
       expect(res.statusCode).toBe(403);
+    });
+
+    it("rejects unauthenticated price board reads", async () => {
+      const currentRes = await app.inject({ method: "GET", url: "/prices/current" });
+      expect(currentRes.statusCode).toBe(401);
+
+      const historyRes = await app.inject({ method: "GET", url: "/prices/history" });
+      expect(historyRes.statusCode).toBe(401);
     });
   });
 });
