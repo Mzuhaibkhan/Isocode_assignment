@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
-import { formatRupees, SyncHoldReason } from "@procurement/shared";
+import { SyncHoldReason } from "@procurement/shared";
 import { Button } from "../../ui/Button.js";
+
+interface HeldPhoto {
+  id: string;
+  kind: "scale" | "meter";
+  imageData?: string | null;
+  aiValueX10?: number | null;
+  typedValueX10?: number | null;
+  matched?: boolean | null;
+}
 
 interface HeldPurchase {
   id: string;
@@ -8,11 +17,11 @@ interface HeldPurchase {
   farmerName: string;
   farmerCode: string;
   crop: string;
-  netKg: number;
-  amountRupees: number;
+  netKg: string;
+  amountFormatted: string;
   flagCodes: string[];
   clientTime: string;
-  photoUrl?: string | null;
+  photos?: HeldPhoto[];
 }
 
 const FLAG_LABELS: Record<string, { label: string; desc: string }> = {
@@ -207,10 +216,10 @@ export function ReviewQueue() {
                     एकूण रक्कम (PAYABLE):
                   </span>
                   <span className="font-display font-black text-2xl text-chaos-black">
-                    {formatRupees(item.amountRupees * 100)}
+                    {item.amountFormatted}
                   </span>
                   <span className="font-mono text-xs text-chaos-muted block">
-                    वजन: <b className="text-chaos-black">{item.netKg.toFixed(1)} KG</b> • {item.crop}
+                    वजन: <b className="text-chaos-black">{item.netKg} KG</b> • {item.crop}
                   </span>
                 </div>
               </div>
@@ -235,6 +244,57 @@ export function ReviewQueue() {
                   })}
                 </div>
               </div>
+
+              {/* Attached scale/meter photo evidence (§10.2) */}
+              {item.photos && item.photos.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-chaos-orange">
+                    [ 📷 डिस्प्ले फोटो पुरावा // DISPLAY PHOTO EVIDENCE ]:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {item.photos.map((ph) => (
+                      <div
+                        key={ph.id}
+                        className="bg-white border-2 border-chaos-black p-2 flex gap-3 items-center"
+                      >
+                        {ph.imageData ? (
+                          <img
+                            src={ph.imageData}
+                            alt={`${ph.kind} display`}
+                            className="w-24 h-18 object-cover border border-chaos-black"
+                          />
+                        ) : (
+                          <div className="w-24 h-18 border border-dashed border-chaos-black/40 flex items-center justify-center font-mono text-[10px] text-chaos-muted">
+                            NO IMAGE
+                          </div>
+                        )}
+                        <div className="font-mono text-[11px] leading-tight">
+                          <span className="font-black uppercase block">
+                            {ph.kind === "scale" ? "काटा (SCALE)" : "मीटर (METER)"}
+                          </span>
+                          <span className="text-chaos-muted block mt-0.5">
+                            AI:{" "}
+                            {ph.aiValueX10 != null
+                              ? `${(ph.aiValueX10 / 10).toFixed(1)}`
+                              : "—"}
+                            {" "}• TYPED:{" "}
+                            {ph.typedValueX10 != null
+                              ? `${(ph.typedValueX10 / 10).toFixed(1)}`
+                              : "—"}
+                          </span>
+                          <span
+                            className={`font-bold block ${
+                              ph.matched ? "text-emerald-700" : "text-red-700"
+                            }`}
+                          >
+                            {ph.matched ? "MATCH ✓" : "MISMATCH ⚠"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Note input & Actions */}
               <div className="mt-2 pt-3 border-t-2 border-chaos-black flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
