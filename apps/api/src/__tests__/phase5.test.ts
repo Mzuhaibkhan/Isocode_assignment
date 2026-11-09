@@ -369,7 +369,7 @@ describe("Phase 5: AI Reading, Flags, Review Queue, Payment Runs & Retry (§10, 
       expect(items.length).toBe(body.farmerCount);
 
       // Verify exact total assertion
-      const itemsTotal = items.reduce((acc, itm) => acc + itm.amountPaise, 0);
+      const itemsTotal = items.reduce((acc: number, itm: { amountPaise: number }) => acc + itm.amountPaise, 0);
       expect(itemsTotal).toBe(body.totalPaise);
     });
 
