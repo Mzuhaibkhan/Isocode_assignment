@@ -14,6 +14,11 @@ export default {
           charcoal: "#141211",
           cream: "#f4f4ee",
           darkCard: "#1f1c1a",
+          // Semantic aliases used across components (map onto the palette above)
+          canvas: "#e3e3db", // page background (== 100)
+          paper: "#f4f4ee", // raised card surface (== cream)
+          black: "#1a1614", // primary ink (== 400)
+          muted: "#665d57", // secondary text
         },
         bg: {
           main: "#e8e8e1",

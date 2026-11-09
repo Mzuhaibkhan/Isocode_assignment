@@ -49,6 +49,7 @@ export function App() {
   const [sampleIndex, setSampleIndex] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const ticker = useCachedTicker();
 
   useEffect(() => {
@@ -87,6 +88,15 @@ export function App() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
+  }, []);
+
+  // Elevate the sticky masthead once the page scrolls so content sliding
+  // underneath reads as clearly "behind" a frosted, opaque bar.
+  useEffect(() => {
+    const onScroll = () => setHeaderScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const sampleSlips = [
@@ -170,7 +180,13 @@ export function App() {
       </div>
 
       {/* Main Brutalist Masthead Header */}
-      <header className="bg-chaos-paper border-b-2 border-chaos-black sticky top-0 z-40">
+      <header
+        className={`sticky top-0 z-40 border-b-2 border-chaos-black backdrop-blur-md transition-all duration-200 ${
+          headerScrolled
+            ? "bg-chaos-paper/85 shadow-[0_6px_0_0_rgba(26,22,20,0.18)]"
+            : "bg-chaos-paper"
+        }`}
+      >
         <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
           {/* Logo & Org Title */}
           <div className="flex items-center gap-3.5">
@@ -231,7 +247,7 @@ export function App() {
         </div>
 
         {/* Tactical Index Tab Rail */}
-        <nav className="border-t-2 border-chaos-black bg-chaos-canvas overflow-x-auto scrollbar-none">
+        <nav className="border-t-2 border-chaos-black bg-chaos-canvas/95 backdrop-blur-sm overflow-x-auto scrollbar-none">
           <div className="max-w-6xl mx-auto px-4 flex gap-1 py-1">
             {visibleNavItems.map((item) => {
               const isActive = activeTab === item.id;
