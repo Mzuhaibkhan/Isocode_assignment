@@ -3,6 +3,9 @@ import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import fastifyStatic from "@fastify/static";
+import path from "node:path";
+import fs from "node:fs";
 import { config } from "./config.js";
 import { authRoutes, requireAuth } from "./routes/auth.js";
 import { membersRoutes } from "./routes/members.js";
@@ -55,18 +58,24 @@ export function buildServer(): FastifyInstance {
     return { status: "ok", timestamp: new Date().toISOString() };
   });
 
-  // Register routes
-  app.register(authRoutes);
-  app.register(membersRoutes);
-  app.register(pricesRoutes);
-  app.register(purchasesRoutes);
-  app.register(smsRoutes);
-  app.register(devicesRoutes);
-  app.register(syncRoutes);
-  app.register(photosRoutes);
-  app.register(reviewRoutes);
-  app.register(paymentsRoutes);
-  app.register(centresRoutes);
+  // Register routes at the root AND under /api. The PWA calls /api/* in
+  // production (same-origin static serving); dev relies on the Vite proxy
+  // stripping /api, so both mounts keep every environment working.
+  const registerRoutes = async (a: FastifyInstance) => {
+    a.register(authRoutes);
+    a.register(membersRoutes);
+    a.register(pricesRoutes);
+    a.register(purchasesRoutes);
+    a.register(smsRoutes);
+    a.register(devicesRoutes);
+    a.register(syncRoutes);
+    a.register(photosRoutes);
+    a.register(reviewRoutes);
+    a.register(paymentsRoutes);
+    a.register(centresRoutes);
+  };
+  app.register(registerRoutes);
+  app.register(registerRoutes, { prefix: "/api" });
 
   // Role guarded test endpoints for verification
   app.get(
@@ -119,6 +128,21 @@ export function buildServer(): FastifyInstance {
       return reply.status(400).send({ error: err.message });
     }
   });
+
+  // Production single-origin deployment: serve the built PWA (apps/web/dist)
+  // from the same Fastify instance so relative /api/* calls and the offline
+  // service worker work without a separate static host or CORS/proxy config.
+  const webDist = path.resolve(process.cwd(), "../web/dist");
+  if (process.env.NODE_ENV === "production" && fs.existsSync(webDist)) {
+    app.register(fastifyStatic, { root: webDist, prefix: "/" });
+    app.setNotFoundHandler((req, reply) => {
+      // SPA fallback: unknown GET navigation requests return index.html
+      if (req.raw.method === "GET" && req.raw.headers.accept?.includes("text/html")) {
+        return reply.sendFile("index.html");
+      }
+      return reply.status(404).send({ error: "NOT_FOUND" });
+    });
+  }
 
   return app;
 }
